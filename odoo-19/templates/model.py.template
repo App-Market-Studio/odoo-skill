@@ -1,0 +1,174 @@
+# -*- coding: utf-8 -*-
+
+from odoo import models, fields, api, Command, _
+from odoo.exceptions import ValidationError, UserError
+from odoo.tools import SQL
+
+
+class CustomItem(models.Model):
+    _name = 'custom.item'
+    _description = 'Custom Item'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _order = 'sequence, id desc'
+    _rec_name = 'name'
+    _check_company_auto = True
+
+    # --- Fields ---
+    name = fields.Char(
+        string='Title',
+        required=True,
+        tracking=True,
+        translate=True,
+        index=True,
+    )
+    code = fields.Char(string='Reference Code', copy=False)
+    sequence = fields.Integer(string='Sequence', default=10)
+    active = fields.Boolean(string='Active', default=True)
+
+    state = fields.Selection(
+        selection=[
+            ('draft', 'Draft'),
+            ('confirmed', 'Confirmed'),
+            ('done', 'Done'),
+            ('cancel', 'Cancelled'),
+        ],
+        string='Status',
+        default='draft',
+        required=True,
+        tracking=True,
+        copy=False,
+        index=True,
+    )
+
+    # --- Multi-Company & Relational Consistency ---
+    # Apply the Multi-Company Decision Matrix:
+    # 1. Company-dependent models: company_id required, strict record rules
+    # 2. Optionally shared models (e.g. res.partner, product.template): company_id nullable
+    # 3. Global models: no company_id
+    # check_company=True belongs on relations requiring consistency (e.g. account, journal, warehouse)
+    partner_id = fields.Many2one(
+        'res.partner',
+        string='Partner',
+        ondelete='restrict',
+        tracking=True,
+    )
+    company_id = fields.Many2one(
+        'res.company',
+        string='Company',
+        default=lambda self: self.env.company,
+        required=True,
+    )
+    currency_id = fields.Many2one(
+        'res.currency',
+        related='company_id.currency_id',
+        string='Currency',
+    )
+
+    amount = fields.Monetary(string='Amount', currency_field='currency_id', aggregator='sum')
+    tax_percent = fields.Float(string='Tax (%)', default=15.0)
+    # Note: On parent header records, omit precompute=True to avoid bypassing ORM
+    # prefetching during single-record inserts. Use precompute=True on child lines instead.
+    total_amount = fields.Monetary(
+        string='Total Amount',
+        compute='_compute_total_amount',
+        store=True,
+        currency_field='currency_id',
+        aggregator='sum',
+    )
+
+    date_deadline = fields.Date(string='Deadline', default=fields.Date.context_today)
+    tag_ids = fields.Many2many('custom.tag', string='Tags')
+    line_ids = fields.One2many('custom.item.line', 'item_id', string='Lines', copy=True)
+    metadata = fields.Json(string='Extra Data')
+
+    # --- SQL Table Objects (New in Odoo 19 - Name MUST begin with '_') ---
+    _positive_amount = models.Constraint(
+        "CHECK(amount >= 0)",
+        "Amount cannot be negative.",
+    )
+
+    _unique_code = models.UniqueIndex(
+        "(code) WHERE code IS NOT NULL",
+        "Reference code must be unique.",
+    )
+
+    # --- Python Constraints ---
+    @api.constrains('date_deadline')
+    def _check_deadline(self):
+        for record in self:
+            if record.date_deadline and record.create_date:
+                if record.date_deadline < record.create_date.date():
+                    raise ValidationError(_("Deadline cannot be prior to creation date."))
+
+    # --- Computed Methods ---
+    @api.depends('amount', 'tax_percent')
+    def _compute_total_amount(self):
+        for record in self:
+            tax = (record.amount * record.tax_percent) / 100.0
+            record.total_amount = record.amount + tax
+
+    # --- CRUD Overrides ---
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get('name') or vals.get('name') == _('New'):
+                vals['name'] = self.env['ir.sequence'].next_by_code('custom.item') or _('New')
+        return super().create(vals_list)
+
+    @api.ondelete(at_uninstall=False)
+    def _unlink_except_confirmed(self):
+        if any(rec.state not in ('draft', 'cancel') for rec in self):
+            raise UserError(_("Cannot delete confirmed or completed items."))
+
+    # --- Business Actions ---
+    def action_confirm(self):
+        for record in self:
+            if record.state != 'draft':
+                raise UserError(_("Only draft items can be confirmed."))
+            record.state = 'confirmed'
+            record.message_post(body=_("Item has been confirmed."))
+
+    def action_done(self):
+        self.write({'state': 'done'})
+
+    def action_cancel(self):
+        self.write({'state': 'cancel'})
+
+    # --- Private Helpers ---
+    @api.private
+    def _fetch_partner_summary(self, partner_id):
+        """Internal helper not exposed via external RPC."""
+        query = SQL(
+            """
+            SELECT count(id) AS total_items, COALESCE(sum(amount), 0) AS total_val
+            FROM custom_item
+            WHERE partner_id = %s
+              AND company_id = %s
+              AND active = TRUE
+            """,
+            partner_id,
+            self.env.company.id,
+        )
+        self.env.cr.execute(query)
+        return self.env.cr.dictfetchone()
+
+
+class CustomItemLine(models.Model):
+    _name = 'custom.item.line'
+    _description = 'Custom Item Line'
+
+    item_id = fields.Many2one('custom.item', string='Item', ondelete='cascade', required=True)
+    description = fields.Char(string='Description', required=True)
+    quantity = fields.Float(string='Quantity', default=1.0)
+    price_unit = fields.Float(string='Unit Price', default=0.0)
+    subtotal = fields.Float(
+        string='Subtotal',
+        compute='_compute_subtotal',
+        store=True,
+        precompute=True,
+    )
+
+    @api.depends('quantity', 'price_unit')
+    def _compute_subtotal(self):
+        for line in self:
+            line.subtotal = line.quantity * line.price_unit

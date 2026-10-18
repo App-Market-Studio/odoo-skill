@@ -1,0 +1,68 @@
+# -*- coding: utf-8 -*-
+
+from odoo.tests import TransactionCase, tagged
+from odoo.exceptions import ValidationError, UserError
+from odoo import Command
+
+
+@tagged('post_install', '-at_install', 'custom_item')
+class TestCustomItem(TransactionCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.partner = cls.env['res.partner'].create({
+            'name': 'Acme Corp',
+            'email': 'acme@example.com',
+        })
+        cls.item = cls.env['custom.item'].create({
+            'name': 'Test Project Alpha',
+            'partner_id': cls.partner.id,
+            'amount': 1000.0,
+            'tax_percent': 10.0,
+            'state': 'draft',
+            'line_ids': [
+                Command.create({
+                    'description': 'Consulting Phase 1',
+                    'quantity': 5.0,
+                    'price_unit': 100.0,
+                }),
+                Command.create({
+                    'description': 'Implementation',
+                    'quantity': 10.0,
+                    'price_unit': 50.0,
+                }),
+            ],
+        })
+
+    def test_total_amount_computation(self):
+        """Test computed total amount including tax."""
+        # amount 1000 + 10% tax = 1100
+        self.assertEqual(self.item.total_amount, 1100.0)
+
+    def test_line_subtotal_computation(self):
+        """Test line subtotals."""
+        lines = self.item.line_ids
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[0].subtotal, 500.0)
+        self.assertEqual(lines[1].subtotal, 500.0)
+
+    def test_confirm_action(self):
+        """Test confirming a draft item."""
+        self.item.action_confirm()
+        self.assertEqual(self.item.state, 'confirmed')
+
+    def test_confirm_invalid_state_raises_user_error(self):
+        """Test confirming an already confirmed item raises UserError."""
+        self.item.action_confirm()
+        with self.assertRaises(UserError):
+            self.item.action_confirm()
+
+    def test_negative_amount_raises_validation_error(self):
+        """Test constraint preventing negative amounts."""
+        with self.assertRaises(ValidationError):
+            self.env['custom.item'].create({
+                'name': 'Negative Price Item',
+                'partner_id': self.partner.id,
+                'amount': -50.0,
+            })

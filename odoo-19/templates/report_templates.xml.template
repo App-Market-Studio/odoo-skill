@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- QWeb PDF Report Template using modern t-out -->
+    <template id="report_custom_item_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <div class="oe_structure"/>
+                        <h2 class="mt-4 mb-3">
+                            <span>Item: </span>
+                            <span t-out="doc.name"/>
+                        </h2>
+
+                        <div class="row mt-3 mb-4">
+                            <div class="col-6">
+                                <strong>Partner: </strong>
+                                <span t-out="doc.partner_id.name"/><br/>
+                                <strong>Deadline: </strong>
+                                <span t-out="doc.date_deadline"/>
+                            </div>
+                            <div class="col-6 text-end">
+                                <strong>Status: </strong>
+                                <span t-out="doc.state"/><br/>
+                                <strong>Total: </strong>
+                                <span t-field="doc.total_amount"/>
+                            </div>
+                        </div>
+
+                        <table class="table table-sm o_main_table table-striped mt-3">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th class="text-end">Quantity</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="doc.line_ids" t-as="line">
+                                    <td><span t-out="line.description"/></td>
+                                    <td class="text-end"><span t-out="line.quantity"/></td>
+                                    <td class="text-end"><span t-out="line.price_unit"/></td>
+                                    <td class="text-end"><span t-field="line.subtotal"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="oe_structure"/>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>

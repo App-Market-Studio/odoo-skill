@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Wizard Form View -->
+    <record id="view_custom_item_batch_wizard_form" model="ir.ui.view">
+        <field name="name">custom.item.batch.wizard.form</field>
+        <field name="model">custom.item.batch.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Batch Process Items">
+                <sheet>
+                    <group>
+                        <field name="action_type" widget="radio"/>
+                        <field name="notes" placeholder="Optional notes to record in chatter..."/>
+                    </group>
+                    <notebook>
+                        <page string="Items to Process" name="items">
+                            <field name="target_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="partner_id"/>
+                                    <field name="total_amount"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <!-- Wizard Footer: Action button + special="cancel" button -->
+                <footer>
+                    <button name="action_apply"
+                            string="Apply"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Cancel"
+                            class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Window Action to launch Wizard modal from List view actions menu -->
+    <record id="action_custom_item_batch_wizard" model="ir.actions.act_window">
+        <field name="name">Batch Process Items</field>
+        <field name="res_model">custom.item.batch.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="model_custom_item"/>
+        <field name="binding_view_types">list</field>
+    </record>
+
+</odoo>

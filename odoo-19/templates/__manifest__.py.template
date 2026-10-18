@@ -1,0 +1,52 @@
+# -*- coding: utf-8 -*-
+{
+    'name': 'My Odoo 19 Module',
+    'version': '19.0.1.0.0',
+    'category': 'Customizations',
+    'summary': 'Modern, portable Odoo 19 module template',
+    'description': """
+        Odoo 19.0 Production Module Template:
+        - Modern ORM models with SQL Table Objects (models.Constraint, models.UniqueIndex)
+        - Clean <list> and <form> views with Python expression modifiers and <chatter/>
+        - Native OWL 2 components and registries
+        - Strict security loading order and multi-company support
+    """,
+    'author': 'Your Name or Company',
+    'website': 'https://www.example.com',
+    'license': 'LGPL-3',
+    'depends': [
+        'base',
+        'web',
+        'mail',
+    ],
+    # STRICT DATA ORDER: Groups -> ACLs -> Rules -> Data/Sequences -> Views -> Reports -> Menus LAST
+    'data': [
+        'security/res_groups.xml',           # 1. Custom Security Groups FIRST
+        'security/ir.model.access.csv',      # 2. Model Access Control Lists
+        'security/ir_rules.xml',             # 3. Record Rules (noupdate="1")
+        'data/ir_sequence_data.xml',         # 4. Number Sequences (noupdate="1")
+        'data/ir_cron_data.xml',             # 5. Scheduled Actions (noupdate="1")
+        'views/my_model_views.xml',          # 6. Form, List, Search Views
+        'report/ir_actions_report.xml',      # 7. QWeb PDF Report Actions
+        'report/report_templates.xml',       # 8. QWeb Report Templates
+        'views/menu.xml',                    # 9. Menu Items LAST
+    ],
+    'demo': [
+        'demo/demo_data.xml',
+    ],
+    'assets': {
+        'web.assets_backend': [
+            'my_module/static/src/components/**/*.js',
+            'my_module/static/src/components/**/*.xml',
+            'my_module/static/src/scss/**/*.scss',
+        ],
+        'web.assets_unit_tests': [
+            'my_module/static/tests/**/*.test.js',
+        ],
+    },
+    # Odoo 19 Hook: accepts a single 'env' parameter
+    'post_init_hook': '_post_init_hook',
+    'installable': True,
+    'application': True,
+    'auto_install': False,
+}

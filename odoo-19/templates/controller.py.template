@@ -1,0 +1,48 @@
+# -*- coding: utf-8 -*-
+
+from odoo import http
+from odoo.http import request
+
+
+class CustomItemController(http.Controller):
+
+    # Modern JSON-RPC controller: type='jsonrpc' (formerly type='json' in older versions)
+    @http.route('/my_module/api/get_items', type='jsonrpc', auth='user', methods=['POST'])
+    def get_items(self, state=None, limit=10):
+        """Fetch items in JSON-RPC format."""
+        domain = []
+        if state:
+            domain.append(('state', '=', state))
+
+        items = request.env['custom.item'].search_read(
+            domain=domain,
+            fields=['id', 'name', 'amount', 'total_amount', 'state'],
+            limit=limit,
+            order='id desc',
+        )
+        return {
+            'status': 'success',
+            'count': len(items),
+            'data': items,
+        }
+
+    # Stateless API token endpoint: auth='bearer' (New in Odoo 19)
+    @http.route('/my_module/api/token_sync', type='jsonrpc', auth='bearer', methods=['POST'])
+    def token_sync(self, **payload):
+        """API endpoint authenticated via HTTP Authorization: bearer <api_key> header."""
+        return {
+            'authenticated_user': request.env.user.name,
+            'result': 'ok',
+        }
+
+    # Standard HTTP controller: type='http'
+    @http.route('/my_module/item/<int:item_id>', type='http', auth='public', website=True)
+    def view_item(self, item_id, **kwargs):
+        """Render public item page or return HTTP response."""
+        item = request.env['custom.item'].sudo().browse(item_id)
+        if not item.exists() or not item.active:
+            return request.not_found()
+
+        return request.render('my_module.item_detail_page', {
+            'item': item,
+        })

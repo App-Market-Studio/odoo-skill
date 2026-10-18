@@ -1,0 +1,50 @@
+# -*- coding: utf-8 -*-
+
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
+
+
+class CustomItemBatchWizard(models.TransientModel):
+    _name = 'custom.item.batch.wizard'
+    _description = 'Batch Item Processing Wizard'
+
+    # Retrieve selected records from active context
+    target_ids = fields.Many2many(
+        'custom.item',
+        string='Selected Items',
+        default=lambda self: self.env.context.get('active_ids'),
+        required=True,
+    )
+    action_type = fields.Selection(
+        selection=[
+            ('confirm', 'Confirm All'),
+            ('done', 'Mark as Done'),
+            ('cancel', 'Cancel All'),
+        ],
+        string='Action',
+        default='confirm',
+        required=True,
+    )
+    notes = fields.Text(string='Processing Notes')
+
+    def action_apply(self):
+        """Execute the batch operation and close the wizard modal."""
+        self.ensure_one()
+        if not self.target_ids:
+            raise UserError(_("Please select at least one record to process."))
+
+        if self.action_type == 'confirm':
+            for record in self.target_ids:
+                if record.state == 'draft':
+                    record.action_confirm()
+        elif self.action_type == 'done':
+            self.target_ids.action_done()
+        elif self.action_type == 'cancel':
+            self.target_ids.action_cancel()
+
+        if self.notes:
+            for record in self.target_ids:
+                record.message_post(body=_("Batch processed: %s", self.notes))
+
+        # Close the modal window in the webclient
+        return {'type': 'ir.actions.act_window_close'}

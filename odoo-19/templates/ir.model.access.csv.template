@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_custom_item_user,custom.item.user,model_custom_item,my_module.group_custom_item_user,1,1,1,0
+access_custom_item_manager,custom.item.manager,model_custom_item,my_module.group_custom_item_manager,1,1,1,1
+access_custom_item_line_user,custom.item.line.user,model_custom_item_line,my_module.group_custom_item_user,1,1,1,0
+access_custom_item_line_manager,custom.item.line.manager,model_custom_item_line,my_module.group_custom_item_manager,1,1,1,1

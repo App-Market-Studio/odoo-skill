@@ -1,0 +1,59 @@
+/** @odoo-module **/
+
+import { describe, expect, test } from "@odoo/hoot";
+import { queryAll, queryFirst } from "@odoo/hoot-dom";
+import { mountWithCleanup } from "@web/../tests/_framework/component_test_helpers";
+import { defineModels, fields, models } from "@web/../tests/_framework/mock_server";
+import { CustomDashboard } from "@custom_module/components/custom_dashboard";
+
+// Define mock model records for frontend testing
+class CustomItem extends models.Model {
+    _name = "custom.item";
+    name = fields.Char();
+    amount = fields.Float();
+    state = fields.Selection({
+        selection: [
+            ["draft", "Draft"],
+            ["confirmed", "Confirmed"],
+            ["done", "Done"],
+        ],
+    });
+
+    _records = [
+        { id: 1, name: "Project Alpha", amount: 1500.0, state: "confirmed" },
+        { id: 2, name: "Project Beta", amount: 3200.0, state: "draft" },
+    ];
+}
+
+describe("CustomDashboard", () => {
+    test("mounts and renders initial item list", async () => {
+        defineModels([CustomItem]);
+
+        await mountWithCleanup(CustomDashboard, {
+            props: { title: "Operations Dashboard" },
+        });
+
+        // Verify title rendered
+        expect(".dashboard-title").toHaveText("Operations Dashboard");
+
+        // Verify cards rendered from mock server
+        expect(".item-card").toHaveCount(2);
+        expect(queryFirst(".item-title")).toHaveText("Project Alpha");
+    });
+
+    test("handles empty dataset gracefully", async () => {
+        class EmptyItem extends models.Model {
+            _name = "custom.item";
+            name = fields.Char();
+            amount = fields.Float();
+            _records = [];
+        }
+
+        defineModels([EmptyItem]);
+
+        await mountWithCleanup(CustomDashboard);
+
+        expect(".item-card").toHaveCount(0);
+        expect(".empty-placeholder").toHaveCount(1);
+    });
+});

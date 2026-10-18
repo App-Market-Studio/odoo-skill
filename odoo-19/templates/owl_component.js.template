@@ -1,0 +1,68 @@
+/** @odoo-module **/
+
+import { Component, useState, onWillStart } from "@odoo/owl";
+import { registry } from "@web/core/registry";
+import { useService } from "@web/core/utils/hooks";
+
+export class CustomDashboard extends Component {
+    static template = "my_module.CustomDashboard";
+    static props = {
+        action: { type: Object, optional: true },
+        actionId: { type: Number, optional: true },
+        className: { type: String, optional: true },
+    };
+
+    setup() {
+        this.orm = useService("orm");
+        this.action = useService("action");
+        this.notification = useService("notification");
+
+        this.state = useState({
+            items: [],
+            isLoading: true,
+            selectedState: "all",
+            totalCount: 0,
+        });
+
+        onWillStart(async () => {
+            await this.loadData();
+        });
+    }
+
+    async loadData() {
+        this.state.isLoading = true;
+        try {
+            const domain = this.state.selectedState === "all" ? [] : [["state", "=", this.state.selectedState]];
+            const result = await this.orm.searchRead(
+                "custom.item",
+                domain,
+                ["id", "name", "partner_id", "total_amount", "state"],
+                { limit: 20, order: "id desc" }
+            );
+            this.state.items = result;
+            this.state.totalCount = result.length;
+        } catch (error) {
+            this.notification.add("Failed to load dashboard data.", { type: "danger" });
+        } finally {
+            this.state.isLoading = false;
+        }
+    }
+
+    async onItemClick(itemId) {
+        await this.action.doAction({
+            type: "ir.actions.act_window",
+            res_model: "custom.item",
+            res_id: itemId,
+            views: [[false, "form"]],
+            target: "current",
+        });
+    }
+
+    async onFilterChanged(ev) {
+        this.state.selectedState = ev.target.value;
+        await this.loadData();
+    }
+}
+
+// Register as client action
+registry.category("actions").add("custom_item_dashboard_action", CustomDashboard);
