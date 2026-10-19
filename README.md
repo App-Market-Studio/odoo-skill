@@ -11,6 +11,7 @@ Built directly from the official Odoo 19.0 documentation and source architecture
 ```text
 odoo-skill/
 ├── AGENTS.md                          # Repository instructions for AI coding agents
+├── LICENSE                            # MIT License
 ├── README.md                          # Human-facing setup & multi-agent usage documentation
 └── odoo-19/                           # The Skill package
     ├── SKILL.md                       # Main agent entrypoint with YAML frontmatter
@@ -185,3 +186,10 @@ The tool scans XML and Python files for:
 - Deprecated `'force_company'` in context (must be `.with_company(company)`)
 - Deprecated `@ormcache_context` (must be `@ormcache`)
 - Uppercase domain operators (`'LIKE'`, `'IN'`)
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE). You are free to use, modify, and distribute these templates and skills in both open-source and proprietary Odoo modules.
+

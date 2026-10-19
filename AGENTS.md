@@ -12,6 +12,7 @@ All paths in this repository are relative, modular, and portable across any OS o
 ```text
 odoo-skill/
 ├── AGENTS.md                          # Repository instructions for AI coding agents
+├── LICENSE                            # MIT License
 ├── README.md                          # Human-facing setup & usage documentation
 └── odoo-19/                           # The Skill package
     ├── SKILL.md                       # Main agent entrypoint with YAML frontmatter
