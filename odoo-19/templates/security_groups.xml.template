@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
+    <!--
+        SECURITY GROUP GUARDRAIL:
+        - Only create new groups if your module requires distinct role-based permissions
+          (e.g., standard user vs administrator).
+        - If the model is an extension to existing apps (e.g. Sale, Stock, CRM),
+          prefer extending their existing groups (e.g., `sales_team.group_sale_salesman`)
+          rather than creating redundant parallel security hierarchies.
+    -->
     <!-- Module Security Category -->
     <record id="module_category_custom_item" model="ir.module.category">
         <field name="name">Custom Module</field>

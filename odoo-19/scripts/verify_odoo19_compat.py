@@ -33,11 +33,40 @@ class Issue:
         self.snippet = snippet.strip()
 
 
+def mask_xml_comments(lines: list[str]) -> list[str]:
+    """Mask text inside <!-- ... --> comments with spaces, preserving line numbers and length."""
+    masked = []
+    in_comment = False
+    for line in lines:
+        chars = []
+        i = 0
+        while i < len(line):
+            if in_comment:
+                if line[i:i+3] == "-->":
+                    in_comment = False
+                    chars.append("   ")
+                    i += 3
+                else:
+                    chars.append(" " if line[i] != "\n" else "\n")
+                    i += 1
+            else:
+                if line[i:i+4] == "<!--":
+                    in_comment = True
+                    chars.append("    ")
+                    i += 4
+                else:
+                    chars.append(line[i])
+                    i += 1
+        masked.append("".join(chars))
+    return masked
+
+
 def check_xml_lines(lines: list[str], file_path: str = "<memory>") -> list[Issue]:
     issues = []
     in_list_view = False
+    clean_lines = mask_xml_comments(lines)
 
-    for idx, line in enumerate(lines, start=1):
+    for idx, (raw_line, line) in enumerate(zip(lines, clean_lines), start=1):
         # Track list context
         if "<list" in line:
             in_list_view = True
@@ -54,7 +83,7 @@ def check_xml_lines(lines: list[str], file_path: str = "<memory>") -> list[Issue
                     "XML_TREE_VIEW",
                     "<tree> view tag is deprecated in Odoo 19.0. Use <list> instead.",
                     "Replace '<tree>' with '<list>' and '</tree>' with '</list>'",
-                    line,
+                    raw_line,
                 )
             )
 
@@ -68,7 +97,7 @@ def check_xml_lines(lines: list[str], file_path: str = "<memory>") -> list[Issue
                     "XML_ATTRS_DEPRECATED",
                     "Dynamic 'attrs' attribute is removed. Use direct Python expressions.",
                     "Use invisible=\"condition\", readonly=\"condition\", or required=\"condition\"",
-                    line,
+                    raw_line,
                 )
             )
 
@@ -82,7 +111,7 @@ def check_xml_lines(lines: list[str], file_path: str = "<memory>") -> list[Issue
                     "XML_STATES_DEPRECATED",
                     "'states' attribute is removed in modern Odoo.",
                     "Replace with invisible=\"state not in ('state1', 'state2')\"",
-                    line,
+                    raw_line,
                 )
             )
 
@@ -96,7 +125,7 @@ def check_xml_lines(lines: list[str], file_path: str = "<memory>") -> list[Issue
                     "XML_VIEW_MODE_TREE",
                     "Action 'view_mode' contains 'tree'. In Odoo 19, the view type is 'list'.",
                     "Change 'tree,form' to 'list,form'",
-                    line,
+                    raw_line,
                 )
             )
 
@@ -110,7 +139,7 @@ def check_xml_lines(lines: list[str], file_path: str = "<memory>") -> list[Issue
                     "XML_T_ESC_DEPRECATED",
                     "'t-esc' and 't-raw' are deprecated in Odoo 19. Use 't-out' for HTML-escaped output.",
                     "Replace 't-esc' / 't-raw' with 't-out'",
-                    line,
+                    raw_line,
                 )
             )
 
@@ -124,7 +153,7 @@ def check_xml_lines(lines: list[str], file_path: str = "<memory>") -> list[Issue
                     "XML_LEGACY_CHATTER",
                     "Legacy 'div.oe_chatter' structure. In Odoo 19, use the modern '<chatter/>' component tag.",
                     "Replace chatter container div with '<chatter/>'",
-                    line,
+                    raw_line,
                 )
             )
 
@@ -134,11 +163,11 @@ def check_xml_lines(lines: list[str], file_path: str = "<memory>") -> list[Issue
                 Issue(
                     file_path,
                     idx,
-                    "WARNING",
+                    "INFO",
                     "XML_LIST_COLUMN_INVISIBLE",
-                    "Field inside <list> uses 'invisible='. In list views, prefer 'column_invisible=' to properly toggle column presence.",
-                    "Change 'invisible=\"...\"' to 'column_invisible=\"...\"'",
-                    line,
+                    "Field inside <list> uses 'invisible='. Note: 'invisible=' hides cell contents, whereas 'column_invisible=' hides the entire column header and cells.",
+                    "If intent is to hide the entire column, use 'column_invisible=\"...\"'",
+                    raw_line,
                 )
             )
 
@@ -434,17 +463,20 @@ def check_python_file(path: Path) -> list[Issue]:
     return check_python_lines(lines, str(path))
 
 
-def scan_target(target_path: Path) -> list[Issue]:
+def scan_target(target_path: Path) -> tuple[list[Issue], int]:
     all_issues = []
+    file_count = 0
     if target_path.is_file():
         if target_path.suffix == ".xml":
             all_issues.extend(check_xml_file(target_path))
+            file_count = 1
         elif target_path.suffix in (".py", ".template"):
             if target_path.name.endswith(".xml.template"):
                 all_issues.extend(check_xml_file(target_path))
             else:
                 all_issues.extend(check_python_file(target_path))
-        return all_issues
+            file_count = 1
+        return all_issues, file_count
 
     for root, _, files in os.walk(target_path):
         # Ignore git, cache, and virtualenvs
@@ -454,13 +486,15 @@ def scan_target(target_path: Path) -> list[Issue]:
             file_path = Path(root) / file
             if file_path.suffix == ".xml":
                 all_issues.extend(check_xml_file(file_path))
+                file_count += 1
             elif file_path.suffix in (".py", ".template"):
                 if file.endswith(".xml.template"):
                     all_issues.extend(check_xml_file(file_path))
                 else:
                     all_issues.extend(check_python_file(file_path))
+                file_count += 1
 
-    return all_issues
+    return all_issues, file_count
 
 
 def main():
@@ -490,7 +524,7 @@ def main():
     total_errors = 0
     total_warnings = 0
     total_info = 0
-    scanned_count = 0
+    total_files_scanned = 0
 
     print(f"\n{COLOR_BOLD}{COLOR_CYAN}=== Odoo 19.0 Compatibility Linter (3-Tier Severity) ==={COLOR_RESET}\n")
 
@@ -501,8 +535,8 @@ def main():
             total_errors += 1
             continue
 
-        issues = scan_target(path)
-        scanned_count += 1
+        issues, count = scan_target(path)
+        total_files_scanned += count
 
         for issue in issues:
             if issue.severity == "ERROR":
@@ -527,15 +561,20 @@ def main():
             print()
 
     print(f"{COLOR_BOLD}--- Summary ---{COLOR_RESET}")
+    print(f"Files scanned: {total_files_scanned}")
     print(f"Errors:   {COLOR_RED if total_errors else COLOR_GREEN}{total_errors}{COLOR_RESET}")
     print(f"Warnings: {COLOR_YELLOW if total_warnings else COLOR_GREEN}{total_warnings}{COLOR_RESET}")
     print(f"Notices:  {COLOR_BLUE if total_info else COLOR_GREEN}{total_info}{COLOR_RESET}")
 
-    if scanned_count == 0 or total_errors > 0 or (args.strict and total_warnings > 0):
+    if total_files_scanned == 0:
+        print(f"\n{COLOR_RED}Audit FAILED: No supported files (.py, .xml, .template) were found to scan.{COLOR_RESET}\n")
+        sys.exit(1)
+
+    if total_errors > 0 or (args.strict and total_warnings > 0):
         print(f"\n{COLOR_RED}Audit FAILED: Please fix Odoo 19 compatibility issues listed above.{COLOR_RESET}\n")
         sys.exit(1)
     else:
-        print(f"\n{COLOR_GREEN}Audit PASSED: All scanned files conform to Odoo 19 conventions!{COLOR_RESET}\n")
+        print(f"\n{COLOR_GREEN}Audit PASSED: All {total_files_scanned} scanned files conform to Odoo 19 conventions!{COLOR_RESET}\n")
         sys.exit(0)
 
 

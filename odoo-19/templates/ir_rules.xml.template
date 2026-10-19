@@ -1,9 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
 
+    <!--
+        ========================================================================
+        RECORD RULE GUARDRAIL (DO NOT BLINDLY GENERATE RECORD RULES):
+        - Multi-company rule: ONLY include if the model has a `company_id` field.
+          Models without `company_id` (system configuration, global dictionaries)
+          must NEVER have multi-company rules (it causes runtime domain errors).
+        - Personal / Row-level rule: ONLY include if the business logic requires
+          row-level data partitioning between standard users and managers.
+          If all internal users share records, `ir.model.access.csv` alone is sufficient.
+          Unnecessary record rules add SQL WHERE-clause overhead to every query.
+        ========================================================================
+    -->
+
     <!-- 1. Multi-Company Record Rule:
          - For strictly company-dependent models: [('company_id', 'in', company_ids)]
          - For optionally shared models (e.g. contacts, products): ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
+         (Delete this record if model has no company_id field)
     -->
     <record id="rule_custom_item_multi_company" model="ir.rule">
         <field name="name">Custom Item: Multi-Company Isolation</field>

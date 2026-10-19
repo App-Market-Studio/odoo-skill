@@ -9,6 +9,8 @@ Tests every linter rule with:
 
 import sys
 import unittest
+import subprocess
+import tempfile
 from pathlib import Path
 
 # Add script directory to sys.path
@@ -106,18 +108,34 @@ class TestOdoo19LinterRules(unittest.TestCase):
         self.assertFalse(any(i.code == "XML_LEGACY_CHATTER" for i in issues))
 
     def test_rule_xml_list_column_invisible(self):
-        """Rule: XML_LIST_COLUMN_INVISIBLE (WARNING)
-        Limitation: Scans field tags within list tags.
+        """Rule: XML_LIST_COLUMN_INVISIBLE (INFO)
+        Limitation: Distinguishes cell-level value hiding (invisible=) vs entire-column hiding (column_invisible=).
         """
         # Positive trigger
         bad_lines = ['<list>', '    <field name="code" invisible="1"/>', '</list>']
         issues = check_xml_lines(bad_lines)
-        self.assertTrue(any(i.code == "XML_LIST_COLUMN_INVISIBLE" for i in issues))
+        self.assertTrue(any(i.code == "XML_LIST_COLUMN_INVISIBLE" and i.severity == "INFO" for i in issues))
 
         # Negative valid case
         good_lines = ['<list>', '    <field name="code" column_invisible="True"/>', '</list>']
         issues = check_xml_lines(good_lines)
         self.assertFalse(any(i.code == "XML_LIST_COLUMN_INVISIBLE" for i in issues))
+
+    def test_xml_comments_ignored(self):
+        """Verify that XML comments (<!-- ... -->) do not trigger false positive errors."""
+        commented_lines = [
+            '<!--',
+            '    <tree string="Old View">',
+            '        <field name="name" attrs="{\'invisible\': True}"/>',
+            '        <span t-esc="deprecated"/>',
+            '    </tree>',
+            '-->',
+            '<list string="New View">',
+            '    <field name="name"/>',
+            '</list>'
+        ]
+        issues = check_xml_lines(commented_lines)
+        self.assertEqual(len(issues), 0, f"Expected 0 issues in commented XML, got {issues}")
 
     # ==================== PYTHON RULES ====================
 
@@ -300,6 +318,63 @@ class TestOdoo19LinterRules(unittest.TestCase):
         clean_lines = ["    total = fields.Monetary(compute='_comp', store=True)"]
         issues = check_python_lines(clean_lines)
         self.assertFalse(any(i.code == "PY_PRECOMPUTE_NOTICE" for i in issues))
+
+
+class TestLinterCLIExitStatus(unittest.TestCase):
+    """End-to-end CLI regression tests for exit status codes and path handling."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cli_path = Path(__file__).parent / "verify_odoo19_compat.py"
+        cls.templates_dir = Path(__file__).parent.parent / "templates"
+
+    def test_cli_valid_clean_directory(self):
+        """Clean valid directory must report Audit PASSED and exit code 0."""
+        result = subprocess.run(
+            [sys.executable, str(self.cli_path), str(self.templates_dir)],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}")
+        self.assertIn("Audit PASSED", result.stdout)
+
+    def test_cli_nonexistent_path(self):
+        """Nonexistent path must report Audit FAILED and exit code 1."""
+        bad_path = "/tmp/nonexistent_odoo19_test_path_9999"
+        result = subprocess.run(
+            [sys.executable, str(self.cli_path), bad_path],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 1, f"Expected returncode 1, got {result.returncode}")
+        self.assertIn("Audit FAILED", result.stdout)
+        self.assertIn("does not exist", result.stdout)
+
+    def test_cli_mixed_valid_and_nonexistent_paths(self):
+        """Mix of valid and nonexistent paths must fail with exit code 1."""
+        bad_path = "/tmp/nonexistent_odoo19_test_path_9999"
+        result = subprocess.run(
+            [sys.executable, str(self.cli_path), str(self.templates_dir), bad_path],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 1, f"Expected returncode 1, got {result.returncode}")
+        self.assertIn("Audit FAILED", result.stdout)
+
+    def test_cli_empty_directory_no_supported_files(self):
+        """Directory containing no supported files must report failure with exit code 1."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # Create a file with an unsupported extension
+            unsupported_file = Path(tmp_dir) / "notes.txt"
+            unsupported_file.write_text("just notes")
+
+            result = subprocess.run(
+                [sys.executable, str(self.cli_path), tmp_dir],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 1, f"Expected returncode 1, got {result.returncode}")
+            self.assertIn("Audit FAILED", result.stdout)
 
 
 if __name__ == "__main__":
