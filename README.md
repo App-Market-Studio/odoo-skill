@@ -2,7 +2,7 @@
 
 A specialized, comprehensive coding agent skill package designed for **Odoo 19.0** custom module development, debugging, refactoring, and code migration.
 
-Built directly from the official Odoo 19.0 documentation and source architecture, combined with senior architectural guardrails (the **Native-First Mandate**, 9-step debugging sequence, SQL table objects, and self-review checklist), this skill equips AI coding agents (Antigravity, OpenCode, Claude Code, Cursor, Windsurf, Cline, GitHub Copilot, Aider, and more) with accurate, production-grade Odoo 19 conventions for any development environment.
+Built directly from the official Odoo 19.0 documentation and source architecture, combined with senior architectural guardrails (the **Native-First Mandate**, the **Principle of Least Code (YAGNI)** with configurable levels `[lite|full|ultra]`, 9-step debugging sequence, SQL table objects, and self-review checklist), this skill equips AI coding agents (Antigravity, OpenCode, Claude Code, Cursor, Windsurf, Cline, GitHub Copilot, Aider, and more) with accurate, production-grade Odoo 19 conventions for any development environment.
 
 ---
 

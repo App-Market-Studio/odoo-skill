@@ -89,3 +89,9 @@ When modifying or adding files to this skill package, strictly follow these rule
    - `ERROR`: Breaking changes that will crash Odoo 19 at boot or runtime.
    - `WARNING`: Deprecated patterns that still function but are discouraged.
    - `INFO`: Style recommendations, subtle context hints, or best-practice notices.
+
+5. **Principle of Least Code (YAGNI) & Minimal Diffs**:
+   - The best code is the code never written. Solve the entire task with the smallest correct change.
+   - Do not add speculative wrappers, helpers, or unrequested abstractions.
+   - Surgical, reviewable diffs beat broad rewrites.
+   - End completions with a 1–2 line disclosure of what was skipped/deferred and any operational risks.
