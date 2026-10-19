@@ -50,7 +50,7 @@ Before implementing any custom module, model, or workflow—especially in comple
    - Financial & partner records: `account.move`, `account.move.line`, `res.partner`, `product.template`.
    - Analytics & tracking: `analytic.mixin`, `utm.mixin`, `portal.mixin`.
 2. **Inspect Implementation & Call Sites in Source**:
-   - Inspect `/home/ams/odoo_skill/19.0/19 source code/odoo-19.0/addons/` to examine how core modules implement similar requirements.
+   - Inspect available Odoo 19 addons in your environment (e.g., standard addons path, virtualenv site-packages, or configured source repository) to examine how core modules implement similar requirements. If source code is not locally accessible in the workspace, consult the bundled references and official docs, and explicitly report in your plan that local source inspection was unavailable.
 3. **Reuse Native Functionality When It Satisfies the Requirement**:
    - Integrate with native accounting, partner management, and company switching rather than inventing redundant custom data structures.
 4. **Introduce Custom Behavior Only When a Genuine Gap Exists**:
@@ -63,8 +63,8 @@ Before implementing any custom module, model, or workflow—especially in comple
 ## Critical Rules — NEVER Violate
 
 1. **Odoo-native first, always.** Exhaust native models and mixins before writing custom code.
-2. **Do not recreate native security rules blindly (Safeguard 1).** For inherited models such as `res.partner` and `product.template`, inspect Odoo's existing ACLs and record rules first. Extend or adjust them only when the requirements justify it.
-3. **Never invent Odoo APIs.** If unsure whether a method or field exists, search `/home/ams/odoo_skill/19.0/19 source code/odoo-19.0/` first.
+2. **Do not recreate native security rules blindly.** For inherited models such as `res.partner` and `product.template`, inspect Odoo's existing ACLs and record rules first. Extend or adjust them only when the requirements justify it.
+3. **Never invent Odoo APIs.** If unsure whether a method or field exists, search the available Odoo source tree or official reference documentation first. Never guess or assume APIs from older versions.
 4. **Inspect before modifying.** Always read and understand existing code before changing it.
 5. **Preserve backward compatibility.** Never break existing views, security rules, or data schemas without explicit user alignment.
 6. **Minimal, targeted changes.** Prefer the smallest correct change over rewriting entire files.
@@ -158,33 +158,47 @@ Before marking any Odoo task as complete, verify each item:
 
 - [ ] Did I search the environment for existing native models/methods before creating new ones?
 - [ ] Did I duplicate any code that could be solved via a native mixin (`mail.thread`, etc.)?
-- [ ] Are all security definitions complete (`res.groups` + `ir.model.access.csv` + `ir.rule`)?
-- [ ] Does this model work correctly in a multi-company environment (`company_id`, `check_company=True`, record rule, `with_company()`)?
-- [ ] Did I avoid N+1 queries? (Zero ORM read/write calls inside loops).
+- [ ] Have security requirements been analyzed (who reads, who writes, who creates, who unlinks)? Are ACLs defined and are record rules / custom groups added only where justified (not blindly for every model)?
+- [ ] If this model has a `company_id`, does it work correctly in a multi-company environment (`company_id`, `check_company=True`, record rule, `with_company()`)?
+- [ ] Did I avoid N+1 queries? (No unbatched `search()`/`search_read()` or unbatched `write()` calls inside loops; leveraging prefetching and batch operations).
 - [ ] Did I use `aggregator=` instead of deprecated `group_operator=` on numeric fields?
 - [ ] Did I use only real Odoo 19 APIs? (No invented methods, fields, or deprecated record attributes like `self._cr` or `request.cr`).
 - [ ] Are all QWeb templates using `t-out` instead of `t-esc` / `t-raw`?
 - [ ] Are SQL table objects (`models.Constraint`, `models.UniqueIndex`) named with a leading underscore `_`?
 - [ ] Are all list view columns using `column_invisible=` rather than `invisible=`?
 - [ ] Did I use `odoo.tools.SQL` for any custom raw SQL queries?
+- [ ] Did I clearly distinguish in my report what was statically verified vs runtime tested, marking anything not executed as `[UNVERIFIED]`?
 - [ ] Would a Senior Odoo Technical Architect approve this code for long-term maintainability?
 
 ---
 
 ## Validation & Verification Workflow
 
-Whenever generating or modifying Odoo 19 code:
+A clean linter report verifies only surface syntax—it does not establish that a module installs or that business logic runs correctly. Follow this 4-tier verification workflow:
 
-1. **Static Compatibility Audit**:
-   Run the built-in audit tool against your target module or file:
+1. **Tier 1: Static Compatibility Audit (Linter)**:
+   Run the built-in audit tool against your target module:
    ```bash
    python3 scripts/verify_odoo19_compat.py /path/to/addon
    ```
-2. **Review XML Views**:
-   - Ensure every list view uses `<list>`, never `<tree>`.
-   - Ensure every condition uses `invisible="expr"`, never `attrs=`.
-   - Check that `column_invisible=` is used for list column visibility.
-3. **Review Python Logic**:
-   - Verify `self.env.cr`, `self.env.uid`, `self.env.context`.
-   - Verify all SQL statements use `odoo.tools.SQL`.
-   - Check that relational updates use `Command` methods.
+   *Verifies:* Syntax, deprecated tags (`<tree>`, `attrs`), method decorators, SQL table objects.
+2. **Tier 2: Automated Unit Tests (`TransactionCase`)**:
+   Run automated test suites to verify computations, constraints, and business logic:
+   ```bash
+   odoo-bin -c odoo.conf -d <test_db> --test-enable --stop-after-init -i <addon> --test-tags .<addon>
+   ```
+   *Verifies:* Isolated model methods, constraints, and transactions with automated DB rollback.
+3. **Tier 3: Module Installation & Schema Validation**:
+   Test installation or upgrade on an actual Odoo 19 instance:
+   ```bash
+   odoo-bin -c odoo.conf -d <test_db> -i <addon> --stop-after-init
+   ```
+   *Verifies:* XML schema parsing, view architecture validity, foreign keys, and registry compilation.
+4. **Tier 4: Access Control & UI Tests**:
+   Verify permissions across distinct user logins and frontend interactions (`HttpCase` / Hoot).
+
+> [!IMPORTANT]
+> **Reporting Mandate**: In your final walkthrough or completion report, always explicitly state the verification status of each tier:
+> - `[VERIFIED]`: Actually executed and passed.
+> - `[SKIPPED - Environment Unavailable]`: Odoo server or DB was not available in the current environment.
+> - `[UNVERIFIED]`: Not yet tested at runtime; must be verified before deployment.

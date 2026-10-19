@@ -13,7 +13,7 @@ Before implementing custom models, methods, or business logic—especially in co
    - Check financial and transactional base models (`account.move`, `account.move.line`, `res.partner`, `product.template`).
    - Check analytics and tracking (`analytic.mixin`, `utm.mixin`).
 2. **Inspect Implementation & Call Sites in Source**:
-   - Search the local Odoo 19 source code (`/home/ams/odoo_skill/19.0/19 source code/odoo-19.0/`) to examine how core modules implement similar requirements.
+   - Search the available Odoo 19 source tree in your environment to examine how core modules implement similar requirements. If source code is not locally accessible, consult the bundled reference guides and official documentation, and state in your plan that source inspection was unavailable.
 3. **Reuse Native Functionality When It Satisfies the Requirement**:
    - Integrate with native accounting, partner management, and company switching rather than inventing redundant custom data structures.
 4. **Introduce Custom Behavior Only When a Genuine Gap Exists**:

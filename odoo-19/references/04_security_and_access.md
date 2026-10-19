@@ -33,13 +33,15 @@ access_estate_property_line_manager,estate.property.line.manager,model_estate_pr
 
 > [!IMPORTANT]
 > **Do not recreate native security rules blindly.**
-> For inherited models such as `res.partner`, `product.template`, or `account.move`, always inspect Odoo's existing ACLs and record rules first in `/home/ams/odoo_skill/19.0/19 source code/odoo-19.0/addons/`. Extend or adjust them only when the business requirements specifically justify it. Overriding native security definitions without inspection can break core workflows, create privilege escalations, or cause unexpected `AccessError` exceptions during standard ERP operations.
+> For inherited models such as `res.partner`, `product.template`, or `account.move`, always inspect Odoo's existing ACLs and record rules first in your available Odoo source addons. Extend or adjust them only when the business requirements specifically justify it. Overriding native security definitions without inspection can break core workflows, create privilege escalations, or cause unexpected `AccessError` exceptions during standard ERP operations.
 
 ---
 
 ## 3. Security Groups (`res.groups`)
 
 Declare security groups in `security/res_groups.xml`:
+> [!NOTE]
+> Not every custom module requires new `res.groups`. If your module simply extends existing functionality (e.g., adding fields to sales orders or partners), reuse native groups (`sales_team.group_sale_salesman`, `base.group_user`) instead of inventing redundant roles.
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -72,13 +74,19 @@ Declare security groups in `security/res_groups.xml`:
 
 ## 4. Record Rules (`ir.rule`)
 
+> [!WARNING]
+> **Record rules are strictly conditional.** Never apply record rules blindly to all models:
+> - **Multi-Company Rule**: Only apply if the model actually defines a `company_id` field. Applying this rule to models without `company_id` causes a fatal startup crash.
+> - **Personal Ownership Rule**: Only apply if records have an assigned user (e.g. `user_id`).
+> - **Lookup / Tag Models**: Do NOT apply record rules to lookup or classification tables (e.g., tags, property types). They should remain readable across the entire company.
+
 Declare record rules in `security/ir_rules.xml` wrapped inside `<odoo noupdate="1">`:
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
 
-    <!-- 1. Multi-Company Rule: Applied according to model ownership design -->
+    <!-- 1. Multi-Company Rule: Apply ONLY when model has company_id -->
     <record id="rule_estate_property_multicompany" model="ir.rule">
         <field name="name">Estate Property: Multi-Company</field>
         <field name="model_id" ref="model_estate_property"/>

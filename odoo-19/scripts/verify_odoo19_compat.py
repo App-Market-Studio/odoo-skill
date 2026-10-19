@@ -498,6 +498,7 @@ def main():
         path = Path(raw_path).resolve()
         if not path.exists():
             print(f"{COLOR_RED}Error: Path '{raw_path}' does not exist.{COLOR_RESET}")
+            total_errors += 1
             continue
 
         issues = scan_target(path)
@@ -530,7 +531,7 @@ def main():
     print(f"Warnings: {COLOR_YELLOW if total_warnings else COLOR_GREEN}{total_warnings}{COLOR_RESET}")
     print(f"Notices:  {COLOR_BLUE if total_info else COLOR_GREEN}{total_info}{COLOR_RESET}")
 
-    if total_errors > 0 or (args.strict and total_warnings > 0):
+    if scanned_count == 0 or total_errors > 0 or (args.strict and total_warnings > 0):
         print(f"\n{COLOR_RED}Audit FAILED: Please fix Odoo 19 compatibility issues listed above.{COLOR_RESET}\n")
         sys.exit(1)
     else:

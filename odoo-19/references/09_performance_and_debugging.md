@@ -48,26 +48,37 @@ When encountering an error, traceback, or unexpected behavior, follow this exact
 
 ## 3. Performance Engineering Rules
 
-### 1. Zero Tolerance for N+1 Queries (Batching Mandate)
+### 1. Eliminating True N+1 Queries & Maximizing Prefetching
 
-Never perform ORM read or write operations inside a loop over recordsets:
+Odoo's ORM includes an intelligent **prefetching engine**: when you iterate over a recordset and read a field on the first record (`for rec in records: print(rec.name)`), Odoo automatically prefetches that field for all records in the recordset in a single SQL query. Reading fields in a recordset loop is normal and efficient.
 
+However, you must eliminate **true N+1 query anti-patterns**:
+
+#### A. Nested Searches in Loops (Critical N+1 Anti-Pattern)
+```python
+# ❌ BAD: Issues N database SELECT queries (one per record)
+for partner in partners:
+    orders = self.env['sale.order'].search([('partner_id', '=', partner.id)])
+
+# ✅ GOOD: Issues exactly 1 database query for all records combined
+orders = self.env['sale.order'].search([('partner_id', 'in', partners.ids)])
+```
+
+#### B. Repeated Writes with Identical Values
 ```python
 # ❌ BAD: Issues N database UPDATE queries
 for rec in records:
     rec.write({'status': 'processed'})
 
-# ✅ GOOD: Issues a single batched UPDATE query
+# ✅ GOOD: Issues a single batched UPDATE query for the entire recordset
 records.write({'status': 'processed'})
 ```
 
-```python
-# ❌ BAD: Issues N database SELECT queries
-partner_names = [order.partner_id.name for order in orders]
-
-# ✅ GOOD: Prefetches relational records in a single query
-partner_names = orders.mapped('partner_id.name')
-```
+#### C. When Per-Record Loop Processing IS Valid & Necessary
+Loops over recordsets are valid and expected in these scenarios:
+1. **Individual State Transitions**: When business logic requires checking and executing distinct per-record validations (`rec.action_confirm()`, `rec._check_can_approve()`).
+2. **Heterogeneous Value Writes**: When each line receives a distinct calculated value that cannot be computed via a stored computed field or batch update.
+3. **External Services**: When making single-item external API calls (e.g., payment gateways, tax calculation engines).
 
 ### 2. Recordset Filtering & Sorting
 
