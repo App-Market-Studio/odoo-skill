@@ -2,7 +2,7 @@
 
 A specialized, comprehensive coding agent skill package designed for **Odoo 19.0** custom module development, debugging, refactoring, and code migration.
 
-Built directly from the official Odoo 19.0 documentation and source architecture, combined with senior architectural guardrails (the **Native-First Mandate**, 9-step debugging sequence, SQL table objects, and self-review checklist), this skill equips Antigravity (and compatible agentic coding assistants) with accurate, up-to-date conventions for any environment.
+Built directly from the official Odoo 19.0 documentation and source architecture, combined with senior architectural guardrails (the **Native-First Mandate**, 9-step debugging sequence, SQL table objects, and self-review checklist), this skill equips AI coding agents (Antigravity, OpenCode, Claude Code, Cursor, Windsurf, Cline, GitHub Copilot, Aider, and more) with accurate, production-grade Odoo 19 conventions for any development environment.
 
 ---
 
@@ -47,46 +47,114 @@ odoo-skill/
 
 ---
 
-## How to Install and Activate the Skill
+## Installation & Agent Setup
 
-First, clone the repository:
+First, clone this repository to your local machine:
 
 ```bash
 git clone https://github.com/App-Market-Studio/odoo-skill.git
 ```
 
-Depending on your workflow, you can install this skill either **per-project** or **globally**.
+This skill is packaged using the open **Agent Skill Standard** (`SKILL.md` with YAML frontmatter, modular references, templates, and standalone audit scripts). You can activate it with any major AI coding assistant:
 
-### Option 1: Install in a Specific Project (Recommended)
+### 1. Antigravity & Gemini CLI
+Antigravity automatically discovers skills in the workspace or global directory:
 
-Link or copy the `odoo-19` directory into your project's `.agents/skills/` folder:
+- **Per-project (Recommended):**
+  ```bash
+  mkdir -p .agents/skills
+  ln -s /path/to/odoo-skill/odoo-19 .agents/skills/odoo-19
+  # or: cp -r /path/to/odoo-skill/odoo-19 .agents/skills/
+  ```
+- **Globally (across all projects):**
+  ```bash
+  mkdir -p ~/.gemini/config/skills
+  ln -s /path/to/odoo-skill/odoo-19 ~/.gemini/config/skills/odoo-19
+  # or: cp -r /path/to/odoo-skill/odoo-19 ~/.gemini/config/skills/
+  ```
+
+### 2. OpenCode
+OpenCode natively supports both **Agent Skills** (on-demand loading) and **`AGENTS.md`** (standing project instructions):
+
+- **As an Agent Skill (Recommended):**
+  ```bash
+  # Per-project:
+  mkdir -p .opencode/skills
+  ln -s /path/to/odoo-skill/odoo-19 .opencode/skills/odoo-19
+  # (Note: OpenCode also automatically discovers `.agents/skills/odoo-19`)
+
+  # Globally (across all projects):
+  mkdir -p ~/.config/opencode/skills
+  ln -s /path/to/odoo-skill/odoo-19 ~/.config/opencode/skills/odoo-19
+  ```
+
+- **Via `AGENTS.md` (Always in context):**
+  ```bash
+  # Option A: Link SKILL.md as your project's AGENTS.md
+  ln -s /path/to/odoo-skill/odoo-19/SKILL.md AGENTS.md
+
+  # Option B: If you already have an AGENTS.md, append a reference:
+  echo -e "\n## Odoo 19 Rules\nFollow Odoo 19 architectural guidelines in [.opencode/skills/odoo-19/SKILL.md](.opencode/skills/odoo-19/SKILL.md)." >> AGENTS.md
+  ```
+
+### 3. Claude Code (Anthropic)
+Claude Code loads instructions from `CLAUDE.md` in the project root:
 
 ```bash
-# From your target Odoo project root:
-mkdir -p .agents/skills
+# Option A: Link SKILL.md as your project's CLAUDE.md
+ln -s /path/to/odoo-skill/odoo-19/SKILL.md CLAUDE.md
 
-# Symlink (recommended so git pull keeps the skill updated):
-ln -s /path/to/odoo-skill/odoo-19 .agents/skills/odoo-19
-
-# Or copy if you prefer a standalone copy:
-cp -r /path/to/odoo-skill/odoo-19 .agents/skills/
+# Option B: If you already have a CLAUDE.md, append a reference:
+echo -e "\n## Odoo 19 Architecture & Rules\nRefer to [.agents/skills/odoo-19/SKILL.md](.agents/skills/odoo-19/SKILL.md) for strict Odoo 19 conventions." >> CLAUDE.md
 ```
 
-Antigravity will automatically discover `.agents/skills/odoo-19/SKILL.md` when working in that workspace.
+### 4. Cursor
+Cursor reads instructions from `.cursorrules` or `.cursor/rules/*.mdc`:
 
-### Option 2: Install Globally (Available across all workspaces)
+- **Option A (.cursorrules):**
+  ```bash
+  ln -s /path/to/odoo-skill/odoo-19/SKILL.md .cursorrules
+  ```
+- **Option B (MDC Rules):**
+  ```bash
+  mkdir -p .cursor/rules
+  ln -s /path/to/odoo-skill/odoo-19/SKILL.md .cursor/rules/odoo-19.mdc
+  ```
 
-Link or copy the `odoo-19` folder into your global configuration root:
+### 5. Windsurf (Codeium)
+Windsurf Cascade loads workspace rules from `.windsurfrules`:
 
 ```bash
-mkdir -p ~/.gemini/config/skills
-
-# Symlink:
-ln -s /path/to/odoo-skill/odoo-19 ~/.gemini/config/skills/odoo-19
-
-# Or copy:
-cp -r /path/to/odoo-skill/odoo-19 ~/.gemini/config/skills/
+ln -s /path/to/odoo-skill/odoo-19/SKILL.md .windsurfrules
 ```
+
+### 6. Cline / Roo Code (VS Code Extension)
+Cline and Roo Code load system prompt instructions from `.clinerules`:
+
+```bash
+ln -s /path/to/odoo-skill/odoo-19/SKILL.md .clinerules
+```
+
+### 7. GitHub Copilot
+GitHub Copilot reads repository-level custom instructions from `.github/copilot-instructions.md`:
+
+```bash
+mkdir -p .github
+ln -s /path/to/odoo-skill/odoo-19/SKILL.md .github/copilot-instructions.md
+```
+
+### 8. Aider
+Aider can load the skill via configuration file or command line:
+
+- **Via `.aider.conf.yml`:**
+  ```yaml
+  read:
+    - /path/to/odoo-skill/odoo-19/SKILL.md
+  ```
+- **Via CLI flag:**
+  ```bash
+  aider --read /path/to/odoo-skill/odoo-19/SKILL.md
+  ```
 
 ---
 
