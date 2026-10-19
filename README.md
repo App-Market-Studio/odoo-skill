@@ -9,12 +9,13 @@ Built directly from the official Odoo 19.0 documentation and source architecture
 ## Directory Structure
 
 ```text
-Skill/
+odoo-skill/
 ├── README.md                          # Setup & usage documentation
 └── odoo-19/                           # The Skill package
     ├── SKILL.md                       # Main agent entrypoint with YAML frontmatter
     ├── scripts/
-    │   └── verify_odoo19_compat.py    # Python CLI linter detecting Odoo 19 antipatterns
+    │   ├── verify_odoo19_compat.py    # Python CLI linter detecting Odoo 19 antipatterns
+    │   └── test_linter.py             # Regression test suite for linter
     ├── templates/                     # Production-ready Odoo 19 boilerplate files
     │   ├── __manifest__.py.template   # Manifest with strict data loading order
     │   ├── model.py.template          # Model with SQL table objects, precompute, and safe SQL
@@ -48,27 +49,43 @@ Skill/
 
 ## How to Install and Activate the Skill
 
+First, clone the repository:
+
+```bash
+git clone https://github.com/App-Market-Studio/odoo-skill.git
+```
+
 Depending on your workflow, you can install this skill either **per-project** or **globally**.
 
 ### Option 1: Install in a Specific Project (Recommended)
 
-Copy or symlink the `odoo-19` folder into your project's `.agents/skills/` directory:
+Link or copy the `odoo-19` directory into your project's `.agents/skills/` folder:
 
 ```bash
-# From your target project root:
+# From your target Odoo project root:
 mkdir -p .agents/skills
-cp -r /path/to/Skill/odoo-19 .agents/skills/
+
+# Symlink (recommended so git pull keeps the skill updated):
+ln -s /path/to/odoo-skill/odoo-19 .agents/skills/odoo-19
+
+# Or copy if you prefer a standalone copy:
+cp -r /path/to/odoo-skill/odoo-19 .agents/skills/
 ```
 
 Antigravity will automatically discover `.agents/skills/odoo-19/SKILL.md` when working in that workspace.
 
 ### Option 2: Install Globally (Available across all workspaces)
 
-Copy the `odoo-19` folder into your global configuration root:
+Link or copy the `odoo-19` folder into your global configuration root:
 
 ```bash
 mkdir -p ~/.gemini/config/skills
-cp -r /path/to/Skill/odoo-19 ~/.gemini/config/skills/
+
+# Symlink:
+ln -s /path/to/odoo-skill/odoo-19 ~/.gemini/config/skills/odoo-19
+
+# Or copy:
+cp -r /path/to/odoo-skill/odoo-19 ~/.gemini/config/skills/
 ```
 
 ---
@@ -78,7 +95,8 @@ cp -r /path/to/Skill/odoo-19 ~/.gemini/config/skills/
 This package includes a standalone CLI script to audit Odoo addons for compliance with Odoo 19 standards:
 
 ```bash
-python3 Skill/odoo-19/scripts/verify_odoo19_compat.py /path/to/your/custom_addon
+# Run from within the repository root:
+python3 odoo-19/scripts/verify_odoo19_compat.py /path/to/your/custom_addon
 ```
 
 The tool scans XML and Python files for:
