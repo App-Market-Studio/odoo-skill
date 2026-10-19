@@ -10,7 +10,8 @@ Built directly from the official Odoo 19.0 documentation and source architecture
 
 ```text
 odoo-skill/
-├── README.md                          # Setup & usage documentation
+├── AGENTS.md                          # Repository instructions for AI coding agents
+├── README.md                          # Human-facing setup & multi-agent usage documentation
 └── odoo-19/                           # The Skill package
     ├── SKILL.md                       # Main agent entrypoint with YAML frontmatter
     ├── scripts/
