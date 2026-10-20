@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
+    <!--
+        Official Odoo Guideline for Report Templates:
+        - File naming: report/<model>_templates.xml (e.g. custom_item_templates.xml)
+        - QWeb template ID: <report_name>_document or <model>_report_template
+        - Strict Odoo 19 standard: Always use `t-out`, never `t-esc` or `t-raw`.
+    -->
+
     <!-- QWeb PDF Report Template using modern t-out -->
     <template id="report_custom_item_document">
         <t t-call="web.html_container">

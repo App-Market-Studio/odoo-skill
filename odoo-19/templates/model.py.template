@@ -1,11 +1,28 @@
 # -*- coding: utf-8 -*-
 
-from odoo import models, fields, api, Command, _
-from odoo.exceptions import ValidationError, UserError
+# 1 : external libraries (sorted)
+# 2 : odoo imports (ASCIIbetically ordered)
+from odoo import Command, _, api, fields, models
+from odoo.exceptions import UserError, ValidationError
 from odoo.tools import SQL
 
 
 class CustomItem(models.Model):
+    """
+    Standard Odoo 19 Model Structure following the official 10-section attribute ordering:
+      1. Private attributes
+      2. Default methods and default_get
+      3. Field declarations
+      4. SQL constraints and indexes (SQL Table Objects)
+      5. Compute, inverse and search methods (in same order as field declarations)
+      6. Selection methods
+      7. Constrains (@api.constrains) and onchange (@api.onchange) methods
+      8. CRUD methods (create, write, unlink overrides)
+      9. Action methods (action_*, self.ensure_one())
+      10. Business methods & private helpers
+    """
+
+    # 1. Private attributes
     _name = 'custom.item'
     _description = 'Custom Item'
     _inherit = ['mail.thread', 'mail.activity.mixin']
@@ -13,7 +30,11 @@ class CustomItem(models.Model):
     _rec_name = 'name'
     _check_company_auto = True
 
-    # --- Fields ---
+    # 2. Default methods and default_get
+    def _default_date_deadline(self):
+        return fields.Date.context_today(self)
+
+    # 3. Fields declaration
     name = fields.Char(
         string='Title',
         required=True,
@@ -26,12 +47,7 @@ class CustomItem(models.Model):
     active = fields.Boolean(string='Active', default=True)
 
     state = fields.Selection(
-        selection=[
-            ('draft', 'Draft'),
-            ('confirmed', 'Confirmed'),
-            ('done', 'Done'),
-            ('cancel', 'Cancelled'),
-        ],
+        selection='_selection_state',
         string='Status',
         default='draft',
         required=True,
@@ -76,12 +92,12 @@ class CustomItem(models.Model):
         aggregator='sum',
     )
 
-    date_deadline = fields.Date(string='Deadline', default=fields.Date.context_today)
+    date_deadline = fields.Date(string='Deadline', default=_default_date_deadline)
     tag_ids = fields.Many2many('custom.tag', string='Tags')
     line_ids = fields.One2many('custom.item.line', 'item_id', string='Lines', copy=True)
     metadata = fields.Json(string='Extra Data')
 
-    # --- SQL Table Objects (New in Odoo 19 - Name MUST begin with '_') ---
+    # 4. SQL constraints and indexes (SQL Table Objects - Name MUST begin with '_')
     _positive_amount = models.Constraint(
         "CHECK(amount >= 0)",
         "Amount cannot be negative.",
@@ -92,7 +108,24 @@ class CustomItem(models.Model):
         "Reference code must be unique.",
     )
 
-    # --- Python Constraints ---
+    # 5. Compute, inverse and search methods (in same order as field declarations)
+    @api.depends('amount', 'tax_percent')
+    def _compute_total_amount(self):
+        for record in self:
+            tax = (record.amount * record.tax_percent) / 100.0
+            record.total_amount = record.amount + tax
+
+    # 6. Selection methods
+    @api.model
+    def _selection_state(self):
+        return [
+            ('draft', 'Draft'),
+            ('confirmed', 'Confirmed'),
+            ('done', 'Done'),
+            ('cancel', 'Cancelled'),
+        ]
+
+    # 7. Constrains and onchange methods
     @api.constrains('date_deadline')
     def _check_deadline(self):
         for record in self:
@@ -100,14 +133,12 @@ class CustomItem(models.Model):
                 if record.date_deadline < record.create_date.date():
                     raise ValidationError(_("Deadline cannot be prior to creation date."))
 
-    # --- Computed Methods ---
-    @api.depends('amount', 'tax_percent')
-    def _compute_total_amount(self):
-        for record in self:
-            tax = (record.amount * record.tax_percent) / 100.0
-            record.total_amount = record.amount + tax
+    @api.onchange('partner_id')
+    def _onchange_partner_id(self):
+        if self.partner_id and not self.code:
+            self.code = self.partner_id.ref or False
 
-    # --- CRUD Overrides ---
+    # 8. CRUD methods (ORM overrides)
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -120,21 +151,23 @@ class CustomItem(models.Model):
         if any(rec.state not in ('draft', 'cancel') for rec in self):
             raise UserError(_("Cannot delete confirmed or completed items."))
 
-    # --- Business Actions ---
+    # 9. Action methods (prefixed with action_*, ensure_one() for single-record actions)
     def action_confirm(self):
-        for record in self:
-            if record.state != 'draft':
-                raise UserError(_("Only draft items can be confirmed."))
-            record.state = 'confirmed'
-            record.message_post(body=_("Item has been confirmed."))
+        self.ensure_one()
+        if self.state != 'draft':
+            raise UserError(_("Only draft items can be confirmed."))
+        self.state = 'confirmed'
+        self.message_post(body=_("Item %(name)s has been confirmed.", name=self.display_name))
 
     def action_done(self):
+        self.ensure_one()
         self.write({'state': 'done'})
 
     def action_cancel(self):
+        self.ensure_one()
         self.write({'state': 'cancel'})
 
-    # --- Private Helpers ---
+    # 10. Business methods & private helpers
     @api.private
     def _fetch_partner_summary(self, partner_id):
         """Internal helper not exposed via external RPC."""
@@ -154,9 +187,11 @@ class CustomItem(models.Model):
 
 
 class CustomItemLine(models.Model):
+    # 1. Private attributes
     _name = 'custom.item.line'
     _description = 'Custom Item Line'
 
+    # 3. Fields declaration
     item_id = fields.Many2one('custom.item', string='Item', ondelete='cascade', required=True)
     description = fields.Char(string='Description', required=True)
     quantity = fields.Float(string='Quantity', default=1.0)
@@ -168,6 +203,7 @@ class CustomItemLine(models.Model):
         precompute=True,
     )
 
+    # 5. Compute methods
     @api.depends('quantity', 'price_unit')
     def _compute_subtotal(self):
         for line in self:

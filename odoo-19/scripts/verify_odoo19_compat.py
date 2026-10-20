@@ -171,6 +171,54 @@ def check_xml_lines(lines: list[str], file_path: str = "<memory>") -> list[Issue
                 )
             )
 
+        # 8. View XML ID naming convention (<model_name>_view_<type>)
+        view_match = re.search(r'<\s*record\s+[^>]*id=["\']([^"\']+)["\'][^>]*model=["\']ir\.ui\.view["\']', line) or re.search(r'<\s*record\s+[^>]*model=["\']ir\.ui\.view["\'][^>]*id=["\']([^"\']+)["\']', line)
+        if view_match:
+            vid = view_match.group(1)
+            if vid.startswith("view_"):
+                issues.append(
+                    Issue(
+                        file_path,
+                        idx,
+                        "WARNING",
+                        "XML_VIEW_ID_CONVENTION",
+                        f"View XML ID '{vid}' starts with 'view_'. Official guideline recommends '<model_name>_view_<view_type>' (e.g. 'sale_order_view_form').",
+                        "Rename to '<model_name>_view_<view_type>'",
+                        raw_line,
+                    )
+                )
+
+        # 9. Action XML ID naming convention (<model_name>_action)
+        act_match = re.search(r'<\s*record\s+[^>]*id=["\']([^"\']+)["\'][^>]*model=["\']ir\.(actions\.act_window|actions\.report)["\']', line) or re.search(r'<\s*record\s+[^>]*model=["\']ir\.(actions\.act_window|actions\.report)["\'][^>]*id=["\']([^"\']+)["\']', line)
+        if act_match:
+            aid = act_match.group(1)
+            if aid.startswith("action_"):
+                issues.append(
+                    Issue(
+                        file_path,
+                        idx,
+                        "WARNING",
+                        "XML_ACTION_ID_CONVENTION",
+                        f"Action XML ID '{aid}' starts with 'action_'. Official guideline recommends '<model_name>_action' or '<model_name>_action_<detail>'.",
+                        "Rename to '<model_name>_action'",
+                        raw_line,
+                    )
+                )
+
+        # 10. Plain <data> tag without noupdate
+        if re.search(r'<\s*data\s*>', line):
+            issues.append(
+                Issue(
+                    file_path,
+                    idx,
+                    "WARNING",
+                    "XML_DATA_TAG_NOUPDATE",
+                    "Plain '<data>' tag without 'noupdate=\"1\"' is redundant. In official Odoo guidelines, '<data>' is only used with noupdate=\"1\".",
+                    "Remove plain '<data>' tag or declare noupdate=\"1\"",
+                    raw_line,
+                )
+            )
+
     return issues
 
 
@@ -451,6 +499,46 @@ def check_python_lines(lines: list[str], file_path: str = "<memory>") -> list[Is
                 )
             )
 
+        # 19. TransientModel naming containing .wizard
+        if re.search(r"^\s*_name\s*=\s*['\"][a-zA-Z0-9_\.]*\.wizard['\"]", line):
+            issues.append(
+                Issue(
+                    file_path,
+                    idx,
+                    "WARNING",
+                    "PY_TRANSIENT_NAME_WIZARD",
+                    "TransientModel _name contains '.wizard'. Official Odoo guideline recommends avoiding the 'wizard' word and using '<related_base_model>.<action>'.",
+                    "Rename _name to '<related_model>.<action>' (e.g. 'account.invoice.make')",
+                    line,
+                )
+            )
+
+        # 20. Translation format misuse inside _()
+        if re.search(r"\b_\(\s*['\"].*?%s.*?['\"]\s*%", line):
+            issues.append(
+                Issue(
+                    file_path,
+                    idx,
+                    "ERROR",
+                    "PY_TRANSLATION_FORMAT_MISUSE",
+                    "Translation formatting inside _(): '_(\"...\" % ...)'. Dynamic formatting before translation prevents proper catalog lookup.",
+                    "Use '_(\"... %s\", val)' instead",
+                    line,
+                )
+            )
+        elif re.search(r"\b_\(\s*['\"].*?['\"]\s*\)\s*%", line):
+            issues.append(
+                Issue(
+                    file_path,
+                    idx,
+                    "ERROR",
+                    "PY_TRANSLATION_OUTSIDE_FORMAT",
+                    "Translation formatting outside _(): '_(\"...\") % ...'. Formatting after translation bypasses fallback translation mechanisms.",
+                    "Use '_(\"... %s\", val)' instead",
+                    line,
+                )
+            )
+
     return issues
 
 
@@ -479,8 +567,8 @@ def scan_target(target_path: Path) -> tuple[list[Issue], int]:
         return all_issues, file_count
 
     for root, _, files in os.walk(target_path):
-        # Ignore git, cache, and virtualenvs
-        if any(ignored in root for ignored in [".git", "__pycache__", "venv", ".env", "node_modules"]):
+        # Ignore git, cache, virtualenvs, and linter self-testing scripts
+        if any(ignored in root for ignored in [".git", "__pycache__", "venv", ".env", "node_modules", "scripts"]):
             continue
         for file in files:
             file_path = Path(root) / file

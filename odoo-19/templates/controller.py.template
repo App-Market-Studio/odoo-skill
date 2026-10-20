@@ -1,5 +1,15 @@
 # -*- coding: utf-8 -*-
 
+"""
+Official Odoo Controller Conventions:
+- All controllers belong to a single controller contained in a file named `<module_name>.py`
+  (e.g., controllers/my_module.py).
+- An old convention was to name this file `main.py`, but it is considered OUTDATED by official Odoo guidelines.
+- If you need to inherit an existing controller from another module, do it in `<inherited_module_name>.py`
+  (e.g., controllers/portal.py inheriting from portal/controllers/portal.py).
+- In Odoo 19: Use `type='jsonrpc'` for JSON-RPC endpoints (type='json' is removed).
+"""
+
 from odoo import http
 from odoo.http import request
 

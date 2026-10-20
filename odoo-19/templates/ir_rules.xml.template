@@ -2,7 +2,11 @@
 <odoo noupdate="1">
 
     <!--
-        ========================================================================
+        Official Odoo Guideline for Record Rules:
+        - File naming: security/<model>_security.xml (e.g. custom_item_security.xml)
+        - Rule XML ID pattern: <model_name>_rule_<concerned_group>
+          (e.g. custom_item_rule_company, custom_item_rule_user, custom_item_rule_manager)
+
         RECORD RULE GUARDRAIL (DO NOT BLINDLY GENERATE RECORD RULES):
         - Multi-company rule: ONLY include if the model has a `company_id` field.
           Models without `company_id` (system configuration, global dictionaries)
@@ -11,38 +15,37 @@
           row-level data partitioning between standard users and managers.
           If all internal users share records, `ir.model.access.csv` alone is sufficient.
           Unnecessary record rules add SQL WHERE-clause overhead to every query.
-        ========================================================================
     -->
 
-    <!-- 1. Multi-Company Record Rule:
+    <!-- 1. Multi-Company Record Rule: <model>_rule_company
          - For strictly company-dependent models: [('company_id', 'in', company_ids)]
          - For optionally shared models (e.g. contacts, products): ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
          (Delete this record if model has no company_id field)
     -->
-    <record id="rule_custom_item_multi_company" model="ir.rule">
+    <record id="custom_item_rule_company" model="ir.rule">
         <field name="name">Custom Item: Multi-Company Isolation</field>
         <field name="model_id" ref="model_custom_item"/>
         <field name="domain_force">[('company_id', 'in', company_ids)]</field>
     </record>
 
-    <!-- 2. Personal Records Rule: Users only access items assigned to them -->
-    <record id="rule_custom_item_personal" model="ir.rule">
+    <!-- 2. Personal Records Rule: <model>_rule_user (Users only access items assigned to them) -->
+    <record id="custom_item_rule_user" model="ir.rule">
         <field name="name">Custom Item: Personal Records</field>
         <field name="model_id" ref="model_custom_item"/>
         <field name="domain_force">['|', ('partner_id.user_ids', 'in', [user.id]), ('create_uid', '=', user.id)]</field>
-        <field name="groups" eval="[(4, ref('group_custom_item_user'))]"/>
+        <field name="groups" eval="[(4, ref('custom_item_group_user'))]"/>
         <field name="perm_read" eval="True"/>
         <field name="perm_write" eval="True"/>
         <field name="perm_create" eval="True"/>
         <field name="perm_unlink" eval="False"/>
     </record>
 
-    <!-- 3. Manager Rule: Managers see all records across the company -->
-    <record id="rule_custom_item_manager_all" model="ir.rule">
+    <!-- 3. Manager Rule: <model>_rule_manager (Managers see all records across the company) -->
+    <record id="custom_item_rule_manager" model="ir.rule">
         <field name="name">Custom Item: Manager Access All</field>
         <field name="model_id" ref="model_custom_item"/>
         <field name="domain_force">[(1, '=', 1)]</field>
-        <field name="groups" eval="[(4, ref('group_custom_item_manager'))]"/>
+        <field name="groups" eval="[(4, ref('custom_item_group_manager'))]"/>
     </record>
 
 </odoo>

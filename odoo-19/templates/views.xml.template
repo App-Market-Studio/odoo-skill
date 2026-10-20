@@ -3,7 +3,7 @@
 
     <!-- ==================== LIST VIEW (<list>) ==================== -->
     <record id="custom_item_view_list" model="ir.ui.view">
-        <field name="name">custom.item.list</field>
+        <field name="name">custom.item.view.list</field>
         <field name="model">custom.item</field>
         <field name="arch" type="xml">
             <list string="Custom Items"
@@ -30,7 +30,7 @@
 
     <!-- ==================== FORM VIEW ==================== -->
     <record id="custom_item_view_form" model="ir.ui.view">
-        <field name="name">custom.item.form</field>
+        <field name="name">custom.item.view.form</field>
         <field name="model">custom.item</field>
         <field name="arch" type="xml">
             <form string="Custom Item">
@@ -111,7 +111,7 @@
 
     <!-- ==================== SEARCH VIEW ==================== -->
     <record id="custom_item_view_search" model="ir.ui.view">
-        <field name="name">custom.item.search</field>
+        <field name="name">custom.item.view.search</field>
         <field name="model">custom.item</field>
         <field name="arch" type="xml">
             <search string="Search Items">
@@ -156,5 +156,25 @@
               parent="custom_item_menu_root"
               action="custom_item_action"
               sequence="10"/>
+
+    <!-- ==================== INHERITING VIEW PATTERN ==================== -->
+    <!--
+        Official Odoo Guideline (Inheriting XML):
+        1. XML ID MUST be identical to the original record ID (the module prefix prevents collisions).
+        2. View name MUST contain an '.inherit.<details>' suffix.
+        3. Primary view inherits require <field name="mode">primary</field> and a new ID.
+    -->
+    <!--
+    <record id="view_partner_form" model="ir.ui.view">
+        <field name="name">res.partner.view.form.inherit.custom.item</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='vat']" position="after">
+                <field name="custom_code"/>
+            </xpath>
+        </field>
+    </record>
+    -->
 
 </odoo>

@@ -256,16 +256,120 @@ patch(FormController.prototype, {
 
 ---
 
-## 7. Assets Declaration in Manifest
+---
+
+## 7. Static Files & Web Assets Organization
+
+Standard Odoo module web assets follow a strict folder and file structure:
+
+```text
+static/
+├── description/
+│   └── icon.png             # Module app icon (128x128 PNG)
+├── img/                     # Static images (do NOT link to external URLs; copy into codebase)
+├── lib/                     # Third-party libraries (NEVER add minified JS; unminified source only)
+├── src/
+│   ├── js/                  # OWL 2 components, hooks, services
+│   │   └── tours/           # User tutorial tours (not test tours)
+│   ├── scss/                # SCSS stylesheets
+│   └── xml/                 # QWeb component templates
+└── tests/
+    ├── tours/               # Automated tour test suites
+    └── *.test.js            # Modern Hoot unit tests (@odoo/hoot)
+```
+
+> [!IMPORTANT]
+> **Static Asset Rules**:
+> - File names MUST only contain lowercase alphanumerics and underscores: `^[a-z0-9_]+$`.
+> - Correct permissions: directory `755`, file `644`.
+> - Never add minified JavaScript libraries (`*.min.js`). Always keep readable, unminified sources for auditability and diff review.
+> - Never hotlink external web assets: copy images, fonts, and libraries directly into `static/`.
+
+---
+
+## 8. CSS & SCSS Coding Guidelines
+
+Odoo enforces strict styling guidelines for SCSS and CSS:
+
+### 1. Syntax & Formatting
+- **Indentation**: Exactly 4 spaces, no tabs.
+- **Line Width**: Max 80 characters per line.
+- **Braces**: Opening brace `{` preceded by a single space; closing brace `}` on its own new line.
+- **Declarations**: Exactly one CSS declaration per line.
+
+### 2. Properties Order ("Outside-In")
+Order CSS properties from the outermost box-model/positioning elements to inner decorative rules:
+1. `position`, `top`, `right`, `bottom`, `left`, `z-index`, `@include o-position-absolute(...)`
+2. `display`, `flex`, `grid`, `align-items`, `justify-content`
+3. `margin`, `margin-*`
+4. `width`, `height`, `min-width`, `max-width`
+5. `border`, `border-*`, `border-radius`
+6. `padding`, `padding-*`
+7. `background`, `background-*`, `color`
+8. `font`, `font-size`, `font-weight`, `line-height`, `text-align`
+9. `box-shadow`, `opacity`, `transform`, `transition`, `filter`
+
+### 3. Variables Placement
+Scoped SCSS variables (`$-var`) and CSS custom properties (`--var`) MUST be placed at the very top of the declaration block, separated from CSS rules by a blank line:
+
+```scss
+.o_custom_item {
+    // 1. Scoped SCSS and contextual CSS variables at the very top
+    $-inner-gap: 1rem;
+    --CustomItem-bg: #{$o-view-background-color};
+    --CustomItem__title-color: #{$o-main-text-color};
+
+    // 2. Position -> Display -> Margin -> Size -> Border -> Padding -> Background -> Font -> Filter
+    position: relative;
+    display: flex;
+    margin-bottom: $-inner-gap;
+    width: 100%;
+    border: 1px solid $o-gray-300;
+    padding: $-inner-gap;
+    background-color: var(--CustomItem-bg);
+    font-size: $font-size-base;
+    box-shadow: $box-shadow-sm;
+}
+```
+
+### 4. Naming Conventions
+- **No ID selectors**: Avoid `#id` selectors in CSS/SCSS.
+- **Class Prefix**: Prefix all component and view classes with `.o_<module_name>` (web client core uses `.o_`).
+- **Grandchild Class Naming**: Avoid deep chaining like `.o_element_wrapper_entries_entry_link`. Use the Grandchild pattern:
+  ```html
+  <!-- Good: Grandchild Pattern -->
+  <div class="o_custom_item">
+      <div class="o_custom_item_entries">
+          <span class="o_custom_item_entry">
+              <a class="o_custom_item_link">Link</a>
+          </span>
+      </div>
+  </div>
+  ```
+- **SCSS Variables**: `$o-[root]-[element]-[property]-[modifier]` (defines design system tokens).
+- **Scoped SCSS Variables**: `$-[variable-name]` (accessible only inside the enclosing block).
+- **SCSS Mixins & Functions**: `o-[name]`, imperative verb for functions (`o-invert-color`), optional parameters `$-[arg]`.
+- **CSS Variables (BEM)**: `--[root]__[element]-[property]--[modifier]`.
+- **Strict Role Separation**:
+  - **SCSS Variables**: Define the compile-time design system tokens.
+  - **CSS Variables**: Strictly for runtime, DOM-related **contextual adaptation** (e.g. adapting a component when rendered inside a form view or modal).
+  - **No `:root`**: Never declare UI variables on `:root` in Odoo modules.
+
+---
+
+## 9. Assets Declaration in Manifest
 
 Declare assets bundles inside `__manifest__.py`:
 
 ```python
 'assets': {
     'web.assets_backend': [
-        'my_module/static/src/components/**/*.js',
-        'my_module/static/src/components/**/*.xml',
+        'my_module/static/src/js/**/*.js',
+        'my_module/static/src/xml/**/*.xml',
         'my_module/static/src/scss/**/*.scss',
+    ],
+    'web.assets_unit_tests': [
+        'my_module/static/tests/**/*.test.js',
     ],
 },
 ```

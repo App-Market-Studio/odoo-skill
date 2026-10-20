@@ -319,6 +319,43 @@ class TestOdoo19LinterRules(unittest.TestCase):
         issues = check_python_lines(clean_lines)
         self.assertFalse(any(i.code == "PY_PRECOMPUTE_NOTICE" for i in issues))
 
+    def test_rule_xml_view_id_convention(self):
+        """Rule: XML_VIEW_ID_CONVENTION (WARNING)"""
+        bad = ['<record id="view_custom_item_form" model="ir.ui.view">']
+        self.assertTrue(any(i.code == "XML_VIEW_ID_CONVENTION" for i in check_xml_lines(bad)))
+        good = ['<record id="custom_item_view_form" model="ir.ui.view">']
+        self.assertFalse(any(i.code == "XML_VIEW_ID_CONVENTION" for i in check_xml_lines(good)))
+
+    def test_rule_xml_action_id_convention(self):
+        """Rule: XML_ACTION_ID_CONVENTION (WARNING)"""
+        bad = ['<record id="action_custom_item" model="ir.actions.act_window">']
+        self.assertTrue(any(i.code == "XML_ACTION_ID_CONVENTION" for i in check_xml_lines(bad)))
+        good = ['<record id="custom_item_action" model="ir.actions.act_window">']
+        self.assertFalse(any(i.code == "XML_ACTION_ID_CONVENTION" for i in check_xml_lines(good)))
+
+    def test_rule_xml_data_tag_noupdate(self):
+        """Rule: XML_DATA_TAG_NOUPDATE (WARNING)"""
+        bad = ['<data>']
+        self.assertTrue(any(i.code == "XML_DATA_TAG_NOUPDATE" for i in check_xml_lines(bad)))
+        good = ['<data noupdate="1">']
+        self.assertFalse(any(i.code == "XML_DATA_TAG_NOUPDATE" for i in check_xml_lines(good)))
+
+    def test_rule_py_transient_name_wizard(self):
+        """Rule: PY_TRANSIENT_NAME_WIZARD (WARNING)"""
+        bad = ["    _name = 'custom.item.batch.wizard'"]
+        self.assertTrue(any(i.code == "PY_TRANSIENT_NAME_WIZARD" for i in check_python_lines(bad)))
+        good = ["    _name = 'custom.item.batch'"]
+        self.assertFalse(any(i.code == "PY_TRANSIENT_NAME_WIZARD" for i in check_python_lines(good)))
+
+    def test_rule_py_translation_format_misuse(self):
+        """Rule: PY_TRANSLATION_FORMAT_MISUSE & PY_TRANSLATION_OUTSIDE_FORMAT (ERROR)"""
+        bad_inside = ["    msg = _('Error %s' % err)"]
+        self.assertTrue(any(i.code == "PY_TRANSLATION_FORMAT_MISUSE" for i in check_python_lines(bad_inside)))
+        bad_outside = ["    msg = _('Error %s') % err"]
+        self.assertTrue(any(i.code == "PY_TRANSLATION_OUTSIDE_FORMAT" for i in check_python_lines(bad_outside)))
+        good = ["    msg = _('Error %s', err)"]
+        self.assertFalse(any(i.code.startswith("PY_TRANSLATION") for i in check_python_lines(good)))
+
 
 class TestLinterCLIExitStatus(unittest.TestCase):
     """End-to-end CLI regression tests for exit status codes and path handling."""

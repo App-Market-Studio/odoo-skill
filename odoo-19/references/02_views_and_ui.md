@@ -10,7 +10,7 @@ In Odoo 19, tabular views are declared using `<list>`:
 
 ```xml
 <record id="estate_property_view_list" model="ir.ui.view">
-    <field name="name">estate.property.list</field>
+    <field name="name">estate.property.view.list</field>
     <field name="model">estate.property</field>
     <field name="arch" type="xml">
         <list string="Properties"
@@ -77,7 +77,7 @@ All conditions are expressed as direct Python expressions:
 
 ```xml
 <record id="estate_property_view_form" model="ir.ui.view">
-    <field name="name">estate.property.form</field>
+    <field name="name">estate.property.view.form</field>
     <field name="model">estate.property</field>
     <field name="arch" type="xml">
         <form string="Property">
@@ -166,7 +166,7 @@ Replaces the legacy `div.oe_chatter` construct. Supported attributes:
 
 ```xml
 <record id="estate_property_view_search" model="ir.ui.view">
-    <field name="name">estate.property.search</field>
+    <field name="name">estate.property.view.search</field>
     <field name="model">estate.property</field>
     <field name="arch" type="xml">
         <search string="Search Properties">
@@ -229,13 +229,39 @@ Window action `view_mode` must use **`list,form`**:
 
 ---
 
-## 6. View Inheritance with `<xpath>`
+## 6. Official XML IDs & Naming Patterns
+
+Official Odoo guidelines enforce consistent XML ID and record name patterns:
+
+| Record Type | XML ID Pattern | Name Field Pattern | Example |
+| :--- | :--- | :--- | :--- |
+| **View** | `<model_name>_view_<view_type>` | Identical to XML ID with dots replacing `_` | `id="estate_property_view_form"`<br>`<field name="name">estate.property.view.form</field>` |
+| **Action** | `<model_name>_action` (or `_action_<detail>`) | Human-readable display label | `id="estate_property_action"`<br>`<field name="name">Properties</field>` |
+| **Menu** | `<model_name>_menu` or `<model_name>_menu_<action>` | Human-readable menu title | `id="estate_property_menu_root"`<br>`<field name="name">Real Estate</field>` |
+| **Security Group** | `<module_name>_group_<group_name>` | Human-readable role title | `id="my_module_group_user"`<br>`<field name="name">User</field>` |
+| **Record Rule** | `<model_name>_rule_<concerned_group>` | Descriptive rule label | `id="estate_property_rule_company"` |
+
+> [!IMPORTANT]
+> **The `<data>` Tag Rule**:
+> - The `<data>` tag is **ONLY used to declare non-updatable records** with `noupdate="1"`.
+> - If an entire file contains only non-updatable records (e.g. sequences, rules), set `noupdate="1"` directly on the root `<odoo>` tag (`<odoo noupdate="1">`) and **do NOT use a `<data>` tag**.
+> - Never wrap standard views or actions in a `<data>` tag without `noupdate`.
+> - Syntactic sugar tags (`<menuitem>` and `<template>`) are preferred over the `<record>` notation.
+
+---
+
+## 7. View Inheritance with `<xpath>`
 
 Customize standard views cleanly using XPath extensions:
 
 ```xml
-<record id="estate_partner_view_form_inherit" model="ir.ui.view">
-    <field name="name">res.partner.form.inherit.estate</field>
+<!-- Official Inheriting XML Rule:
+     1. XML ID MUST be identical to the original record ID (module prefix prevents collisions).
+     2. View name MUST have an '.inherit.<details>' suffix.
+     3. Primary view overrides declare <field name="mode">primary</field> and use a new ID.
+-->
+<record id="view_partner_form" model="ir.ui.view">
+    <field name="name">res.partner.view.form.inherit.estate</field>
     <field name="model">res.partner</field>
     <field name="inherit_id" ref="base.view_partner_form"/>
     <field name="arch" type="xml">

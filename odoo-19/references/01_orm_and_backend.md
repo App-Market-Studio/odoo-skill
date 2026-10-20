@@ -35,19 +35,27 @@ Odoo 19 reorganized the monolithic `models.py` and `fields.py` into a modular pa
 - `odoo/orm/decorators.py`: `@api.*` decorators
 - `odoo/orm/environments.py`: `Environment`
 
-### Standard Module Developer Imports:
+### Standard Module Developer Imports (ASCIIbetically ordered):
 ```python
-from odoo import models, fields, api, Command, _
-from odoo.exceptions import UserError, ValidationError, AccessError, MissingError
+# 1 : external libraries / stdlib (sorted)
+import base64
+import re
+
+# 2 : odoo submodules (ASCIIbetically ordered)
+from odoo import Command, _, api, fields, models
+from odoo.exceptions import AccessError, MissingError, UserError, ValidationError
 from odoo.fields import Domain
 from odoo.tools import SQL, ormcache
+
+# 3 : imports from other odoo addons (only when strictly necessary)
+# from odoo.addons.portal.controllers.portal import CustomerPortal
 ```
 
 ---
 
 ## 2. Standard Module Directory Structure & Import Chain
 
-Follow this standardized directory structure (modeled on Odoo core apps like `sale`, `crm`, `project`):
+Follow this standardized directory structure (strictly adhering to official Odoo guidelines):
 
 ```text
 my_module/
@@ -55,25 +63,29 @@ my_module/
 ├── __manifest__.py          # Module metadata, dependencies, and loading order
 ├── controllers/
 │   ├── __init__.py
-│   └── main.py              # HTTP & JSONRPC (@http.route) endpoints
+│   └── my_module.py         # HTTP & JSONRPC endpoints (name matches module; 'main.py' is outdated)
 ├── data/
-│   ├── ir_cron.xml          # Scheduled actions (noupdate="1")
+│   ├── ir_cron_data.xml     # Scheduled actions (noupdate="1")
 │   ├── ir_sequence_data.xml # Automated numbering sequences (noupdate="1")
-│   └── mail_template_data.xml
+│   ├── my_model_data.xml    # Initial master data (<model>_data.xml)
+│   └── my_model_demo.xml    # Demo data (<model>_demo.xml; demo files belong in data/)
 ├── models/
 │   ├── __init__.py          # One import per model file
-│   └── my_model.py          # Model with SQL table objects, fields, and logic
+│   ├── my_model.py          # Main model definition (<main_model>.py)
+│   └── res_partner.py       # Inherited model in dedicated file (<inherited_model>.py)
 ├── report/
 │   ├── __init__.py
-│   ├── ir_actions_report.xml# Report action definition
-│   └── report_templates.xml # QWeb PDF report using t-out
+│   ├── my_model_report.py   # SQL view statistics model (<model>_report.py)
+│   ├── my_model_reports.xml # Report action & paperformat (<model>_reports.xml)
+│   └── my_model_templates.xml# QWeb PDF report templates (<model>_templates.xml)
 ├── security/
-│   ├── res_groups.xml       # User & Manager security groups
 │   ├── ir.model.access.csv  # Model-level ACL rules
-│   └── ir_rules.xml         # Multi-company and personal record rules (noupdate="1")
+│   ├── my_module_groups.xml # Custom user & manager security groups (<module>_groups.xml)
+│   └── my_model_security.xml# Record rules with noupdate="1" (<model>_security.xml)
 ├── static/
 │   ├── description/
 │   │   └── icon.png         # Addon app icon (128x128 PNG)
+│   ├── lib/                 # Third-party unminified JS/CSS libraries
 │   └── src/
 │       ├── js/              # OWL 2 components & services
 │       ├── xml/             # OWL QWeb component templates
@@ -83,12 +95,12 @@ my_module/
 │   ├── test_my_model.py     # Backend TransactionCase / HttpCase
 │   └── test_frontend.test.js# Modern Hoot unit tests
 ├── views/
-│   ├── my_model_views.xml   # <list>, <form>, <search>, stat buttons, <chatter/>
-│   └── menu.xml             # Main root & category menus (loaded LAST in data)
+│   ├── my_model_views.xml   # <list>, <form>, <search>, stat buttons, <chatter/> (<model>_views.xml)
+│   └── my_module_menus.xml  # Main menus & category menus (<module>_menus.xml)
 └── wizard/
     ├── __init__.py
-    ├── my_wizard.py         # TransientModel wizard logic
-    └── my_wizard_views.xml  # Modal form view with <footer> actions
+    ├── custom_item_batch.py # TransientModel (<transient>.py; avoid 'wizard' word)
+    └── custom_item_batch_views.xml # Modal form view (<transient>_views.xml)
 ```
 
 ### `__init__.py` Import Chain
@@ -101,38 +113,94 @@ from . import wizard
 
 # my_module/models/__init__.py (one import per model file)
 from . import my_model
-from . import my_other_model
+from . import res_partner
 ```
 
 ---
 
-## 2. Model Declaration & Attributes
+---
 
-Odoo 19 models inherit from `odoo.models`:
+## 3. Official 10-Section Model Attribute Ordering
+
+According to official Odoo guidelines, attributes and methods within a model class MUST follow this strict 10-section sequence:
+
+1. **Private attributes**: `_name`, `_description`, `_inherit`, `_inherits`, `_order`, `_rec_name`, `_check_company_auto`.
+2. **Default methods and `default_get`**: Methods returning defaults (e.g. `_default_<field>`).
+3. **Field declarations**: Grouped by purpose; Many2one suffixed by `_id`, Many2many/One2many suffixed by `_ids`.
+4. **SQL constraints and indexes**: Modern SQL Table Objects (`models.Constraint`, `models.Index`, `models.UniqueIndex` with leading `_`).
+5. **Compute, inverse, and search methods**: In the **exact same order** as the field declarations above.
+6. **Selection methods**: Dynamic methods returning choices for selection fields (`_selection_<field>`).
+7. **Constrains and onchange methods**: Validation methods (`@api.constrains`) and interactive form helpers (`@api.onchange`).
+8. **CRUD overrides**: ORM lifecycle overrides (`create`, `write`, `unlink`, `_search`, `name_search`).
+9. **Action methods**: Business actions triggered by buttons (`action_*`), requiring `self.ensure_one()` for single-record operations.
+10. **Business methods & private helpers**: Core domain calculations and internal methods (`@api.private`).
 
 ```python
 class EstateProperty(models.Model):
+    # 1. Private attributes
     _name = 'estate.property'
-    _description = 'Real Estate Property'     # REQUIRED on every model
+    _description = 'Real Estate Property'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'sequence, id desc'
     _rec_name = 'name'
     _check_company_auto = True
+
+    # 2. Default methods
+    def _default_date_deadline(self):
+        return fields.Date.context_today(self)
+
+    # 3. Field declarations
+    name = fields.Char(string='Name', required=True)
+    sequence = fields.Integer(string='Sequence', default=10)
+    expected_price = fields.Float(string='Expected Price')
+    selling_price = fields.Float(
+        string='Selling Price',
+        compute='_compute_selling_price',
+        store=True,
+    )
+    property_type = fields.Selection(
+        selection='_selection_property_type',
+        string='Type',
+    )
+    date_deadline = fields.Date(string='Deadline', default=_default_date_deadline)
+    company_id = fields.Many2one('res.company', string='Company', default=lambda self: self.env.company)
+
+    # 4. SQL table objects
+    _positive_price = models.Constraint("CHECK(expected_price >= 0)", "Price must be positive.")
+
+    # 5. Compute and inverse methods (in same order as fields)
+    @api.depends('expected_price')
+    def _compute_selling_price(self):
+        for record in self:
+            record.selling_price = record.expected_price * 0.95
+
+    # 6. Selection methods
+    @api.model
+    def _selection_property_type(self):
+        return [('residential', 'Residential'), ('commercial', 'Commercial')]
+
+    # 7. Constrains and onchanges
+    @api.constrains('selling_price', 'expected_price')
+    def _check_selling_price(self):
+        for record in self:
+            if record.selling_price > record.expected_price:
+                raise ValidationError(_("Selling price cannot exceed expected price."))
+
+    # 8. CRUD overrides
+    @api.model_create_multi
+    def create(self, vals_list):
+        return super().create(vals_list)
+
+    # 9. Action methods (prefixed action_*, ensure_one for single-record actions)
+    def action_confirm(self):
+        self.ensure_one()
+        self.write({'state': 'confirmed'})
+
+    # 10. Business methods
+    def get_market_analysis(self):
+        self.ensure_one()
+        return self._fetch_area_statistics()
 ```
-
-### Core Model Types
-- `models.Model`: Persistent database table.
-- `models.TransientModel`: Temporary records (e.g. wizards, dialogs), periodically cleared by vacuum.
-- `models.AbstractModel`: Abstract base class with no database table (e.g. mixins like `mail.thread`).
-
-### Key Model Attributes
-- `_name`: Technical identifier (e.g. `'sale.order'`).
-- `_description`: Human-readable label (required to avoid warnings).
-- `_inherit`: Model inheritance (`'res.partner'` to extend, or list of mixins).
-- `_inherits`: Delegation inheritance (e.g. `{'res.partner': 'partner_id'}`).
-- `_order`: Default ordering clause (e.g. `'sequence, date desc, id desc'`).
-- `_rec_name`: Field to use for record display name (defaults to `'name'`).
-- `_check_company_auto = True`: Enforces multi-company consistency checks across relational fields.
 
 ---
 
@@ -289,9 +357,11 @@ def _onchange_partner_id(self):
 
 ---
 
-## 7. Exception Handling
+---
 
-Always import standard exceptions from `odoo.exceptions`:
+## 7. Exception Handling & Savepoints
+
+Catch only specific exceptions and avoid overly broad exception handling. Limit the scope of `try-except` blocks.
 
 ```python
 from odoo.exceptions import (
@@ -301,42 +371,89 @@ from odoo.exceptions import (
     AccessDenied,      # Authentication failures (traceback suppressed)
     MissingError,      # Record not found / deleted
     RedirectWarning,   # Warning dialog offering an action button
-    CacheMiss,         # Internal cache miss
 )
+
+# Recoverable operations with savepoint
+try:
+    with self.env.cr.savepoint():
+        record.process_external_sync()
+except UserError as err:
+    _logger.warning("Recoverable sync error: %s", err)
 ```
+
+> [!WARNING]
+> **PostgreSQL Savepoints Performance Limit**:
+> - Starting **more than 64 savepoints during a single database transaction** causes PostgreSQL query planning and snapshot management to slow down significantly.
+> - If running on read-replicas, savepoints impose severe synchronization overhead.
+> - When processing records in loops, do not place a savepoint around every iteration. Batch records or convert large sync operations into chunked scheduled actions.
 
 ---
 
-## 8. Environment & Recordset Context
+## 8. Environment & Context Discipline
 
-In Odoo 19, record attributes `_cr`, `_uid`, and `_context` are deprecated. Always access them through `self.env`:
+The context is an immutable `frozendict`. Modify it exclusively using `with_context()`:
 
 ```python
-# Database cursor
-cursor = self.env.cr
+# Good: Replace or extend context
+records_in_ctx = records.with_context(active_test=False)
+records_with_extra = records.with_context(**extra_values)
 
-# User ID and record
-user_id = self.env.uid
-current_user = self.env.user
-
-# Context
-context_dict = self.env.context
-lang = self.env.context.get('lang')
-
-# Companies
-current_company = self.env.company
-allowed_companies = self.env.companies
-
-# Environment switching
-record_in_context = self.with_context(active_test=False, default_state='draft')
-record_as_super = self.sudo()
-record_in_company = self.with_company(other_company)
-
-# ⚠️ Breaking Change in Odoo 19:
-# Do NOT set 'force_company' in context: context key 'force_company' is no longer supported and raises DeprecationWarning.
-# Always use self.with_company(company) instead.
-# Setting 'company' in context is also discouraged due to conflict with @depends_context('company').
+# Modern Odoo 19 Company Switching:
+record_in_company = records.with_company(target_company)
+# ⚠️ NEVER set 'force_company' in context in Odoo 19 (raises DeprecationWarning).
 ```
+
+> [!WARNING]
+> **Context Side Effects & 'default_*' Propagation**:
+> - Values placed in `context` propagate down the entire ORM call stack.
+> - For example, calling `create()` with `default_my_field` in context sets the default for the main model, but if child records (such as `sale.order.line` during `sale.order` creation) happen to have a field with the same name, their default value will also be overridden unintentionally!
+> - When adding custom context parameters, **always prefix keys with the module name** (e.g. `mail_create_nosubscribe`, `estate_skip_notification`).
+
+---
+
+## 9. Translation Function `_()` Discipline
+
+Odoo uses `_()` (available via `from odoo import _` or `self.env._`) to mark translatable static strings at runtime.
+
+### Strict Translation Rules:
+1. **Static Literals Only**: Calls must be in the form `_('literal string')`. Dynamic string concatenation (`_(prefix + str)`) is strictly forbidden.
+2. **No Formatting Inside or Outside**:
+   - ❌ **FORBIDDEN**: `_('Record %s cannot be modified!' % record.name)` (breaks translation catalog extraction).
+   - ❌ **FORBIDDEN**: `_('Record %s cannot be modified!') % record.name` (fails translation fallback).
+   - ✅ **REQUIRED**: `_('Record %s cannot be modified!', record.name)`
+3. **Prefer Named Placeholders for Multiple Variables**:
+   - Single variable: `%s` positional parameter is acceptable.
+   - Multiple variables: Prefer `%(varname)s` with keyword arguments to allow translators to reorder words:
+     ```python
+     _("Item %(title)s owned by %(partner)s has expired.", title=item.name, partner=item.partner_id.name)
+     ```
+4. **Never Wrap Field Values**:
+   - Translatable model fields (`translate=True`) are translated automatically by the framework based on the user/partner language. Wrapping field values like `_(product.name)` is redundant and invalid.
+
+---
+
+## 10. Extendable Architecture (Think Extendable)
+
+Avoid writing monolithic methods containing hardcoded business logic. Structure code so downstream submodules can extend functionality with minimal overrides:
+
+- **Single Responsibility**: Split large methods as soon as they handle more than one task.
+- **Hook Methods**: Extract search domains, default dictionaries, and value preparation into dedicated helper methods:
+  ```python
+  # Clean, extendable pattern
+  def action_send(self):
+      self.ensure_one()
+      partners = self.env['res.partner'].search(self._get_recipient_domain())
+      vals = self._prepare_message_vals(partners)
+      self._dispatch_message(vals)
+
+  def _get_recipient_domain(self):
+      """Override in submodules to customize recipient selection."""
+      return [('category_id', '=', self.category_id.id)]
+
+  def _prepare_message_vals(self, partners):
+      """Override in submodules to add extra payload fields."""
+      return {'partner_ids': [Command.set(partners.ids)], 'body': self.notes}
+  ```
 
 ---
 

@@ -34,6 +34,7 @@ odoo-skill/
     │   ├── report_templates.xml.template
     │   ├── controller.py.template
     │   ├── owl_component.js.template
+    │   ├── component.scss.template
     │   ├── test_model.py.template
     │   └── hoot_test.js.template
     └── references/                    # Deep-dive modular technical reference guides (.md)
@@ -72,13 +73,19 @@ When modifying or adding files to this skill package, strictly follow these rule
    - Never write machine-specific paths (e.g. `/home/...`, `C:\...`, `/root/...`).
    - Use dynamic path discovery or relative project paths everywhere.
 
-2. **Strict Odoo 19 Standard Compliance**:
+2. **Strict Odoo 19 Standard Compliance & Official Guidelines**:
    - Views: Use `<list>` instead of legacy `<tree>`. View mode must be `list,form`.
+   - View XML IDs & Naming: `<model_name>_view_<type>`. `<field name="name">` MUST match XML ID with dots replacing underscores.
+   - Inherited Views: Must retain the exact XML ID of the target record, with `.inherit.<details>` in the view name.
    - UI Expressions: Direct Python expressions (`invisible=`, `readonly=`, `required=`), never legacy `attrs="..."` or `states="..."`.
    - List Columns: Use `column_invisible=` when toggling an entire column.
    - QWeb: Always use `t-out`, never `t-esc` or `t-raw`.
    - SQL Table Objects: Use `models.Constraint`, `models.Index`, and `models.UniqueIndex` (must start with a leading underscore `_`). Never use deprecated `_sql_constraints`.
-   - Controllers: HTTP routing for JSON-RPC must use `type='jsonrpc'`, never legacy `type='json'`.
+   - Model Structure: Enforce the official 10-section attribute ordering sequence. Single-record action methods must start with `self.ensure_one()`.
+   - Transient Models: Name as `<related_base_model>.<action>` (e.g. `account.invoice.make`), strictly avoiding the word `wizard`.
+   - Controllers: Single controller named `<module_name>.py` (deprecates `main.py`). HTTP routing for JSON-RPC must use `type='jsonrpc'`.
+   - Translation `_()`: Literal strings only with `_('literal %s', arg)` or `_('literal %(k)s', k=v)`. Never format inside or outside `_()`.
+   - SCSS/CSS: Outside-in properties order, scoped variables `$-var` and BEM contextual CSS variables `--var` at the top, `.o_<module_name>` class prefix.
    - Safe SQL: Always wrap raw SQL using `odoo.tools.SQL`.
 
 3. **Non-Dogmatic Performance & Security Guidelines**:

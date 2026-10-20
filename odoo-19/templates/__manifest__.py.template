@@ -10,6 +10,7 @@
         - Clean <list> and <form> views with Python expression modifiers and <chatter/>
         - Native OWL 2 components and registries
         - Strict security loading order and multi-company support
+        - Official Odoo file structure and naming conventions
     """,
     'author': 'Your Name or Company',
     'website': 'https://www.example.com',
@@ -19,25 +20,34 @@
         'web',
         'mail',
     ],
-    # STRICT DATA ORDER: Groups -> ACLs -> Rules -> Data/Sequences -> Views -> Reports -> Menus LAST
+    # STRICT DATA ORDER according to official guidelines:
+    # 1. Security Groups (<module>_groups.xml)
+    # 2. Model ACLs (ir.model.access.csv)
+    # 3. Record Rules (<model>_security.xml)
+    # 4. Sequenced / Business Data (data/<model>_data.xml)
+    # 5. Backend Views (<model>_views.xml)
+    # 6. Report Actions & Templates (report/<model>_reports.xml, report/<model>_templates.xml)
+    # 7. Menus LAST (views/<module>_menus.xml)
     'data': [
-        'security/res_groups.xml',           # 1. Custom Security Groups FIRST
-        'security/ir.model.access.csv',      # 2. Model Access Control Lists
-        'security/ir_rules.xml',             # 3. Record Rules (noupdate="1")
-        'data/ir_sequence_data.xml',         # 4. Number Sequences (noupdate="1")
-        'data/ir_cron_data.xml',             # 5. Scheduled Actions (noupdate="1")
-        'views/my_model_views.xml',          # 6. Form, List, Search Views
-        'report/ir_actions_report.xml',      # 7. QWeb PDF Report Actions
-        'report/report_templates.xml',       # 8. QWeb Report Templates
-        'views/menu.xml',                    # 9. Menu Items LAST
+        'security/my_module_groups.xml',       # 1. Custom Security Groups FIRST
+        'security/ir.model.access.csv',         # 2. Model Access Control Lists
+        'security/my_model_security.xml',       # 3. Record Rules (<model>_security.xml)
+        'data/ir_sequence_data.xml',            # 4. Number Sequences (noupdate="1")
+        'data/ir_cron_data.xml',                # 5. Scheduled Actions (noupdate="1")
+        'data/my_model_data.xml',               # 6. Initial Master Data
+        'views/my_model_views.xml',             # 7. Form, List, Search Views
+        'report/my_model_reports.xml',          # 8. QWeb PDF Report Actions
+        'report/my_model_templates.xml',        # 9. QWeb Report Templates
+        'views/my_module_menus.xml',            # 10. Menu Items LAST
     ],
+    # Demo data placed under data/ suffixed by _demo.xml (never a demo/ folder)
     'demo': [
-        'demo/demo_data.xml',
+        'data/my_model_demo.xml',
     ],
     'assets': {
         'web.assets_backend': [
-            'my_module/static/src/components/**/*.js',
-            'my_module/static/src/components/**/*.xml',
+            'my_module/static/src/js/**/*.js',
+            'my_module/static/src/xml/**/*.xml',
             'my_module/static/src/scss/**/*.scss',
         ],
         'web.assets_unit_tests': [

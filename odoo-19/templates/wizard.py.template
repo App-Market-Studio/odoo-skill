@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
 
-from odoo import models, fields, api, _
+from odoo import Command, _, api, fields, models
 from odoo.exceptions import UserError
 
 
-class CustomItemBatchWizard(models.TransientModel):
-    _name = 'custom.item.batch.wizard'
-    _description = 'Batch Item Processing Wizard'
+class CustomItemBatch(models.TransientModel):
+    """
+    Transient Model (Wizard) following official Odoo naming:
+    - Avoid the 'wizard' word in _name.
+    - Pattern: <related_base_model>.<action> (e.g. 'custom.item.batch', 'account.invoice.make').
+    - File naming: wizard/<transient>.py and wizard/<transient>_views.xml.
+    """
+    _name = 'custom.item.batch'
+    _description = 'Batch Item Processing'
 
     # Retrieve selected records from active context
     target_ids = fields.Many2many(
@@ -44,7 +50,7 @@ class CustomItemBatchWizard(models.TransientModel):
 
         if self.notes:
             for record in self.target_ids:
-                record.message_post(body=_("Batch processed: %s", self.notes))
+                record.message_post(body=_("Batch processed: %(notes)s", notes=self.notes))
 
         # Close the modal window in the webclient
         return {'type': 'ir.actions.act_window_close'}

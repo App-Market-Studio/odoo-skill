@@ -152,6 +152,13 @@ Before generating or modifying any code, enforce these strict requirements:
 | **Company Context** | `context={'force_company': id}` | `record.with_company(company)` |
 | **Frontend Tests** | Legacy QUnit suites | **Hoot** (`@odoo/hoot` in `web.assets_unit_tests`) |
 | **Internal Methods** | Unmarked public methods | Mark internal methods with `@api.private` or prefix with `_` |
+| **View XML IDs & Names** | `id="view_..."`, name omitting `.view.` | `id="<model>_view_<type>"` and `<field name="name">` matching XML ID with dots |
+| **Inherited Views** | Inventing new XML ID with `_inherit` | Keep the **exact same XML ID** as the target record; suffix view name with `.inherit.<details>` |
+| **Transient Models** | `_name` containing `.wizard` or file `my_wizard.py` | `<related_base_model>.<action>` (e.g. `account.invoice.make`), strictly avoiding the word `wizard` |
+| **Controller Naming** | `controllers/main.py` (outdated) | `controllers/<module_name>.py` and `<inherited_module_name>.py` |
+| **Translation `_()`** | `_('...' % val)` or `_('...') % val` | `_('... %s', val)` or `_('... %(k)s', k=val)` (static literals only, no formatting before/after) |
+| **Model Structure** | Arbitrary attribute sequence | Official **10-Section Ordering** (private -> default -> fields -> SQL -> compute -> selection -> constrains -> CRUD -> actions -> business) |
+| **Action Methods** | Missing single-record validation | Add `self.ensure_one()` at the top of single-record `action_*` methods |
 
 ---
 
@@ -200,6 +207,7 @@ Use the provided templates when scaffolding new modules or files:
 - [OWL 2 Component](./templates/owl_component.js.template): Modern OWL component with hooks, state, and registry registration.
 - [Backend Unit Test](./templates/test_model.py.template): `TransactionCase` test class.
 - [Frontend Hoot Test](./templates/hoot_test.js.template): Modern Hoot unit test suite using `@odoo/hoot`.
+- [SCSS Stylesheet](./templates/component.scss.template): Official Odoo outside-in properties order, scoped variables, and BEM contextual CSS variables.
 
 ---
 
@@ -217,6 +225,12 @@ Before marking any Odoo task as complete, verify each item:
 - [ ] Are all QWeb templates using `t-out` instead of `t-esc` / `t-raw`?
 - [ ] Are SQL table objects (`models.Constraint`, `models.UniqueIndex`) named with a leading underscore `_`?
 - [ ] Are all list view columns using `column_invisible=` rather than `invisible=`?
+- [ ] Do view XML IDs follow `<model>_view_<type>` and does `<field name="name">` match the XML ID with dots replacing underscores?
+- [ ] Do inheriting views preserve the exact XML ID of the target record and add `.inherit.<details>` to the view name?
+- [ ] Do TransientModels avoid the word `wizard` and adhere to `<related_base_model>.<action>`?
+- [ ] Are translation strings formatted strictly as `_('literal %s', arg)` or `_('literal %(k)s', k=v)` without formatting before or after `_()`?
+- [ ] Does the model adhere to the official 10-section attribute ordering sequence?
+- [ ] Do single-record action methods (`action_*`) begin with `self.ensure_one()`?
 - [ ] Did I use `odoo.tools.SQL` for any custom raw SQL queries?
 - [ ] Did I clearly distinguish in my report what was statically verified vs runtime tested, marking anything not executed as `[UNVERIFIED]`?
 - [ ] Would a Senior Odoo Technical Architect approve this code for long-term maintainability?

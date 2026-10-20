@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
+    <!--
+        Official Odoo Guideline for Printable Reports:
+        - File naming: report/<model>_reports.xml (report actions, paperformat, ...)
+          and report/<model>_templates.xml (xml report templates).
+        - Report Action XML ID: <model_name>_action_report (or <model_name>_action_<detail>)
+    -->
+
     <!-- QWeb PDF Report Action -->
-    <record id="action_report_custom_item" model="ir.actions.report">
+    <record id="custom_item_action_report" model="ir.actions.report">
         <field name="name">Custom Item Report</field>
         <field name="model">custom.item</field>
         <field name="report_type">qweb-pdf</field>

@@ -1,0 +1,108 @@
+// ==========================================================================
+// Official Odoo 19 SCSS/CSS Coding Guidelines Template
+// ==========================================================================
+// Rules:
+// 1. 4-space indentation, max 80 characters wide.
+// 2. Class prefix: .o_<module_name> (webclient uses .o_). Never use ID selectors.
+// 3. Nested classes: Use the "Grandchild" approach (e.g. .o_item_entries -> .o_item_entry -> .o_item_link).
+// 4. Properties order: "Outside-In"
+//    - Position & Z-index
+//    - Display & Layout (flex, grid)
+//    - Margins
+//    - Dimensions (width, height)
+//    - Borders & Border-radius
+//    - Paddings
+//    - Backgrounds & Colors
+//    - Typography (font, text-align)
+//    - Filters, Shadows, Transitions
+// 5. Scoped SCSS variables ($-var) and CSS variables (--var) placed at the top,
+//    followed by an empty line separating them from declarations.
+// 6. SCSS variables define the design system ($o-[root]-[element]-[property]-[modifier]).
+// 7. CSS variables are strictly DOM-related for contextual adaptation (--[root]__[element]-[property]--[modifier]).
+// 8. Avoid defining CSS variables on the :root pseudo-class.
+// ==========================================================================
+
+// Global / Module SCSS Variables (design system tokens)
+$o-custom-item-bg: $o-view-background-color !default;
+$o-custom-item-border-color: $o-gray-300 !default;
+$o-custom-item-title-color: $o-main-text-color !default;
+
+// Component Main Block
+.o_custom_item {
+    // 1. Scoped SCSS Variables ($-*) and Contextual CSS Variables (--*) at very top
+    $-inner-gap: 1rem;
+    $-avatar-size: 2.5rem;
+
+    --CustomItem-bg: #{$o-custom-item-bg};
+    --CustomItem__title-color: #{$o-custom-item-title-color};
+
+    // 2. Position
+    position: relative;
+
+    // 3. Display & Layout
+    display: flex;
+    flex-direction: column;
+
+    // 4. Margins
+    margin-bottom: $-inner-gap;
+
+    // 5. Dimensions
+    width: 100%;
+    max-width: 720px;
+
+    // 6. Borders
+    border: 1px solid $o-custom-item-border-color;
+    border-radius: $border-radius;
+
+    // 7. Padding
+    padding: $-inner-gap;
+
+    // 8. Background
+    background-color: var(--CustomItem-bg);
+
+    // 9. Typography
+    font-size: $font-size-base;
+
+    // 10. Decorative / Transitions
+    box-shadow: $box-shadow-sm;
+    transition: box-shadow 0.2s ease-in-out;
+
+    &:hover {
+        box-shadow: $box-shadow;
+    }
+
+    // Nested elements using Grandchild naming
+    .o_custom_item_header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: $-inner-gap * 0.5;
+
+        .o_custom_item_title {
+            margin: 0;
+            color: var(--CustomItem__title-color);
+            font-size: $font-size-lg;
+            font-weight: $font-weight-bold;
+        }
+
+        .o_custom_item_badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 50rem;
+            font-size: $font-size-sm;
+        }
+    }
+
+    .o_custom_item_content {
+        margin: 0;
+        color: $o-main-text-color;
+        line-height: $line-height-base;
+    }
+}
+
+// Contextual Adaptation (CSS variables override in a different view/parent context)
+.o_form_view {
+    .o_custom_item {
+        --CustomItem-bg: #{$o-gray-100};
+        --CustomItem__title-color: #{$o-brand-primary};
+    }
+}

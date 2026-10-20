@@ -39,7 +39,7 @@ access_estate_property_line_manager,estate.property.line.manager,model_estate_pr
 
 ## 3. Security Groups (`res.groups`)
 
-Declare security groups in `security/res_groups.xml`:
+Declare security groups in `security/<module>_groups.xml` (e.g. `security/estate_groups.xml`):
 > [!NOTE]
 > Not every custom module requires new `res.groups`. If your module simply extends existing functionality (e.g., adding fields to sales orders or partners), reuse native groups (`sales_team.group_sale_salesman`, `base.group_user`) instead of inventing redundant roles.
 
@@ -53,18 +53,18 @@ Declare security groups in `security/res_groups.xml`:
         <field name="sequence">20</field>
     </record>
 
-    <!-- Standard User Group -->
-    <record id="group_estate_user" model="res.groups">
+    <!-- Standard User Group: <module_name>_group_<group_name> -->
+    <record id="estate_group_user" model="res.groups">
         <field name="name">Agent / User</field>
         <field name="category_id" ref="module_category_estate"/>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
     </record>
 
-    <!-- Manager Group (inherits User group) -->
-    <record id="group_estate_manager" model="res.groups">
+    <!-- Manager Group: <module_name>_group_manager (inherits User group) -->
+    <record id="estate_group_manager" model="res.groups">
         <field name="name">Manager / Administrator</field>
         <field name="category_id" ref="module_category_estate"/>
-        <field name="implied_ids" eval="[(4, ref('group_estate_user'))]"/>
+        <field name="implied_ids" eval="[(4, ref('estate_group_user'))]"/>
         <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
     </record>
 </odoo>
@@ -80,37 +80,37 @@ Declare security groups in `security/res_groups.xml`:
 > - **Personal Ownership Rule**: Only apply if records have an assigned user (e.g. `user_id`).
 > - **Lookup / Tag Models**: Do NOT apply record rules to lookup or classification tables (e.g., tags, property types). They should remain readable across the entire company.
 
-Declare record rules in `security/ir_rules.xml` wrapped inside `<odoo noupdate="1">`:
+Declare record rules in `security/<model>_security.xml` (e.g. `security/estate_property_security.xml`) wrapped inside `<odoo noupdate="1">`:
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
 
-    <!-- 1. Multi-Company Rule: Apply ONLY when model has company_id -->
-    <record id="rule_estate_property_multicompany" model="ir.rule">
+    <!-- 1. Multi-Company Rule: <model_name>_rule_company (Apply ONLY when model has company_id) -->
+    <record id="estate_property_rule_company" model="ir.rule">
         <field name="name">Estate Property: Multi-Company</field>
         <field name="model_id" ref="model_estate_property"/>
         <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
     </record>
 
-    <!-- 2. Personal Records Rule: Users see their own assigned records -->
-    <record id="rule_estate_property_personal" model="ir.rule">
+    <!-- 2. Personal Records Rule: <model_name>_rule_user -->
+    <record id="estate_property_rule_user" model="ir.rule">
         <field name="name">Estate Property: Personal Records</field>
         <field name="model_id" ref="model_estate_property"/>
         <field name="domain_force">['|', ('user_id', '=', user.id), ('user_id', '=', False)]</field>
-        <field name="groups" eval="[(4, ref('my_module.group_estate_user'))]"/>
+        <field name="groups" eval="[(4, ref('my_module.estate_group_user'))]"/>
         <field name="perm_read" eval="True"/>
         <field name="perm_write" eval="True"/>
         <field name="perm_create" eval="True"/>
         <field name="perm_unlink" eval="False"/>
     </record>
 
-    <!-- 3. Manager Rule: Managers see all records -->
-    <record id="rule_estate_property_manager_all" model="ir.rule">
+    <!-- 3. Manager Rule: <model_name>_rule_manager -->
+    <record id="estate_property_rule_manager" model="ir.rule">
         <field name="name">Estate Property: Manager All</field>
         <field name="model_id" ref="model_estate_property"/>
         <field name="domain_force">[(1, '=', 1)]</field>
-        <field name="groups" eval="[(4, ref('my_module.group_estate_manager'))]"/>
+        <field name="groups" eval="[(4, ref('my_module.estate_group_manager'))]"/>
     </record>
 
 </odoo>

@@ -8,21 +8,27 @@ This guide details best practices for creating interactive dialogs (Wizards / Tr
 
 Wizards are temporary data records stored in memory/database that are automatically vacuumed periodically. They are primarily used for multi-step workflows, bulk actions, and user confirmation forms.
 
-### Python Pattern: `wizard/my_wizard.py`
+### Python Pattern: `wizard/<transient>.py` (e.g. `wizard/estate_property_batch.py`)
+
+> [!IMPORTANT]
+> **Official Odoo Transient (Wizard) Naming Guidelines**:
+> - Pattern: `<related_base_model>.<action>` (e.g. `estate.property.confirm.batch`, `account.invoice.make`).
+> - **Avoid the word `wizard`** in `_name` and file naming.
+> - File naming: `wizard/<transient>.py` and `wizard/<transient>_views.xml`.
 
 ```python
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api, _
+from odoo import Command, _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
 
-class ConfirmBatchWizard(models.TransientModel):
-    _name = 'my.module.batch.wizard'
-    _description = 'Confirm Batch Wizard'
+class EstatePropertyBatch(models.TransientModel):
+    _name = 'estate.property.batch'
+    _description = 'Batch Property Confirmation'
 
     # Grab active records from the context
     target_ids = fields.Many2many(
-        'my.module.item',
+        'estate.property',
         string='Target Records',
         default=lambda self: self.env.context.get('active_ids'),
         required=True,
@@ -47,7 +53,7 @@ class ConfirmBatchWizard(models.TransientModel):
         return {'type': 'ir.actions.act_window_close'}
 ```
 
-### XML View Pattern: `wizard/my_wizard_views.xml`
+### XML View Pattern: `wizard/<transient>_views.xml` (e.g. `wizard/estate_property_batch_views.xml`)
 
 Wizard forms must include a `<footer>` containing the submit button and a Cancel button with `special="cancel"`:
 
@@ -55,9 +61,10 @@ Wizard forms must include a `<footer>` containing the submit button and a Cancel
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <record id="view_batch_wizard_form" model="ir.ui.view">
-        <field name="name">my.module.batch.wizard.form</field>
-        <field name="model">my.module.batch.wizard</field>
+    <!-- View XML ID: <model_name>_view_<type>, View name matches XML ID with dots -->
+    <record id="estate_property_batch_view_form" model="ir.ui.view">
+        <field name="name">estate.property.batch.view.form</field>
+        <field name="model">estate.property.batch</field>
         <field name="arch" type="xml">
             <form string="Batch Confirmation">
                 <sheet>
@@ -90,13 +97,13 @@ Wizard forms must include a `<footer>` containing the submit button and a Cancel
         </field>
     </record>
 
-    <!-- Window Action to launch wizard modal -->
-    <record id="action_batch_wizard" model="ir.actions.act_window">
+    <!-- Window Action: <model_name>_action to launch wizard modal from list view -->
+    <record id="estate_property_batch_action" model="ir.actions.act_window">
         <field name="name">Batch Confirmation</field>
-        <field name="res_model">my.module.batch.wizard</field>
+        <field name="res_model">estate.property.batch</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
-        <field name="binding_model_id" ref="model_my_module_item"/>
+        <field name="binding_model_id" ref="model_estate_property"/>
         <field name="binding_view_types">list</field>
     </record>
 
@@ -109,27 +116,28 @@ Wizard forms must include a `<footer>` containing the submit button and a Cancel
 
 Odoo 19 generates PDF reports via QWeb templates and `wkhtmltopdf`.
 
-### Report Action Declaration: `report/ir_actions_report.xml`
+### Report Action Declaration: `report/<model>_reports.xml` (e.g. `report/estate_property_reports.xml`)
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <record id="action_report_my_item" model="ir.actions.report">
-        <field name="name">Item Summary Report</field>
-        <field name="model">my.module.item</field>
+    <!-- Action XML ID: <model_name>_action_report -->
+    <record id="estate_property_action_report" model="ir.actions.report">
+        <field name="name">Property Summary Report</field>
+        <field name="model">estate.property</field>
         <field name="report_type">qweb-pdf</field>
-        <field name="report_name">my_module.report_item_template</field>
-        <field name="report_file">my_module.report_item_template</field>
-        <field name="print_report_name">'Item_%s' % (object.name.replace('/', '_'))</field>
-        <field name="binding_model_id" ref="model_my_module_item"/>
+        <field name="report_name">my_module.report_property_template</field>
+        <field name="report_file">my_module.report_property_template</field>
+        <field name="print_report_name">'Property_%s' % (object.name.replace('/', '_'))</field>
+        <field name="binding_model_id" ref="model_estate_property"/>
         <field name="binding_type">report</field>
     </record>
 
 </odoo>
 ```
 
-### QWeb Template: `report/report_templates.xml`
+### QWeb Template: `report/<model>_templates.xml` (e.g. `report/estate_property_templates.xml`)
 
 > [!IMPORTANT]
 > **Strict QWeb Rule**: Never use `<t t-esc="..." />` or `<t t-raw="..." />`. Always use `t-out`.
