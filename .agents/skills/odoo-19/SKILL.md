@@ -209,7 +209,7 @@ Use the provided templates as structural reference scaffolds when scaffolding ne
 - [Views XML](./templates/views.xml.template): `<list>`, `<form>`, `<search>`, stat buttons, `<chatter/>`, menus.
 - [Security CSV](./templates/ir.model.access.csv.template): Standard ACL file with group mapping.
 - [Security Groups](./templates/security_groups.xml.template): Category, User, and Manager groups with implied IDs.
-- [Record Rules](./templates/ir_rules.xml.template): Multi-company isolation and personal record rules.
+- [Record Rules](./templates/ir_rules.xml.template): Conditional record rule patterns (multi-company, personal records, manager override scaffolds).
 - [Wizard Model](./templates/wizard.py.template): `TransientModel` with active ID processing.
 - [Wizard Views](./templates/wizard_views.xml.template): Form view with modal `<footer>` actions.
 - [Number Sequence](./templates/ir_sequence_data.xml.template): Standard `ir.sequence` XML definition.
