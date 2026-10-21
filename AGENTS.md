@@ -1,7 +1,7 @@
 # AGENTS.md — Odoo 19 Skill Repository
 
 ## Repository Purpose
-This repository provides an open-standard, modular **Odoo 19.0 AI Coding Agent Skill** (`odoo-19/`). It equips AI coding assistants (Antigravity, OpenCode, Claude Code, Cursor, Windsurf, Cline, GitHub Copilot, Aider, and more) with senior architectural guardrails, reference guides, boilerplate templates, and automated compatibility linters for custom Odoo 19 development.
+This repository provides an open-standard, modular **Odoo 19.0 AI Coding Agent Skill** (`.agents/skills/odoo-19/`). It equips AI coding assistants (Antigravity, OpenCode, Claude Code, Cursor, Windsurf, Cline, GitHub Copilot, Aider, and more) with senior architectural guardrails, reference guides, boilerplate templates, and automated compatibility linters for custom Odoo 19 development.
 
 ---
 
@@ -10,43 +10,45 @@ This repository provides an open-standard, modular **Odoo 19.0 AI Coding Agent S
 All paths in this repository are relative, modular, and portable across any OS or container:
 
 ```text
-odoo-skill/
-├── AGENTS.md                          # Repository instructions for AI coding agents
-├── LICENSE                            # MIT License
-├── README.md                          # Human-facing setup & usage documentation
-└── odoo-19/                           # The Skill package
-    ├── SKILL.md                       # Main agent entrypoint with YAML frontmatter
-    ├── scripts/
-    │   ├── verify_odoo19_compat.py    # Standalone CLI linter detecting Odoo 19 antipatterns
-    │   └── test_linter.py             # Regression unit test suite (standard library unittest)
-    ├── templates/                     # Modular Odoo 19 boilerplate files (.template)
-    │   ├── __manifest__.py.template
-    │   ├── model.py.template
-    │   ├── views.xml.template
-    │   ├── wizard.py.template
-    │   ├── wizard_views.xml.template
-    │   ├── security_groups.xml.template
-    │   ├── ir.model.access.csv.template
-    │   ├── ir_rules.xml.template
-    │   ├── ir_sequence_data.xml.template
-    │   ├── ir_cron_data.xml.template
-    │   ├── ir_actions_report.xml.template
-    │   ├── report_templates.xml.template
-    │   ├── controller.py.template
-    │   ├── owl_component.js.template
-    │   ├── component.scss.template
-    │   ├── test_model.py.template
-    │   └── hoot_test.js.template
-    └── references/                    # Deep-dive modular technical reference guides (.md)
-        ├── 01_orm_and_backend.md
-        ├── 02_views_and_ui.md
-        ├── 03_owl_and_frontend.md
-        ├── 04_security_and_access.md
-        ├── 05_external_api_json2.md
-        ├── 06_testing_and_cli.md
-        ├── 07_breaking_changes_19.md
-        ├── 08_wizards_reports_and_automation.md
-        └── 09_performance_and_debugging.md
+<project_root>/
+├── .agents/
+│   └── skills/
+│       └── odoo-19/                       # The Skill package
+│           ├── SKILL.md                   # Main agent entrypoint with YAML frontmatter
+│           ├── scripts/
+│           │   ├── verify_odoo19_compat.py # Standalone CLI linter detecting Odoo 19 antipatterns
+│           │   └── test_linter.py         # Regression unit test suite (standard library unittest)
+│           ├── templates/                 # Modular Odoo 19 boilerplate files (.template)
+│           │   ├── __manifest__.py.template
+│           │   ├── model.py.template
+│           │   ├── views.xml.template
+│           │   ├── wizard.py.template
+│           │   ├── wizard_views.xml.template
+│           │   ├── security_groups.xml.template
+│           │   ├── ir.model.access.csv.template
+│           │   ├── ir_rules.xml.template
+│           │   ├── ir_sequence_data.xml.template
+│           │   ├── ir_cron_data.xml.template
+│           │   ├── ir_actions_report.xml.template
+│           │   ├── report_templates.xml.template
+│           │   ├── controller.py.template
+│           │   ├── owl_component.js.template
+│           │   ├── component.scss.template
+│           │   ├── test_model.py.template
+│           │   └── hoot_test.js.template
+│           └── references/                # Deep-dive modular technical reference guides (.md)
+│               ├── 01_orm_and_backend.md
+│               ├── 02_views_and_ui.md
+│               ├── 03_owl_and_frontend.md
+│               ├── 04_security_and_access.md
+│               ├── 05_external_api_json2.md
+│               ├── 06_testing_and_cli.md
+│               ├── 07_breaking_changes_19.md
+│               ├── 08_wizards_reports_and_automation.md
+│               └── 09_performance_and_debugging.md
+├── AGENTS.md                              # Repository instructions for AI coding agents
+├── LICENSE                                # MIT License
+└── README.md                              # Human-facing setup & usage documentation
 ```
 
 ---
@@ -57,10 +59,10 @@ All test and audit tools use Python standard library only with zero external dep
 
 ```bash
 # 1. Run the linter unit test suite (regression testing)
-python3 odoo-19/scripts/test_linter.py
+python3 .agents/skills/odoo-19/scripts/test_linter.py
 
 # 2. Audit all templates and references in strict mode
-python3 odoo-19/scripts/verify_odoo19_compat.py odoo-19/templates odoo-19/references --strict
+python3 .agents/skills/odoo-19/scripts/verify_odoo19_compat.py .agents/skills/odoo-19/templates .agents/skills/odoo-19/references --strict
 ```
 
 ---
