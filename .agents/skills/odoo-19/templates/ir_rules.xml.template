@@ -1,34 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
 
+    <!-- =========================================================================
+         REFERENCE SCAFFOLD: RECORD RULES (OPTIONAL PATTERNS)
+         =========================================================================
+         WARNING: DO NOT BLINDLY COPY THIS ENTIRE FILE.
+         Record rules are additive SQL WHERE clauses evaluated on EVERY query.
+         - For most models, model-level security in 'ir.model.access.csv' is sufficient.
+         - ONLY create a record rule when explicit data partitioning is required.
+         - If neither multi-company nor row-level user partitioning is needed,
+           DO NOT create a security XML file.
+         ========================================================================= -->
+
     <!--
-        Official Odoo Guideline for Record Rules:
-        - File naming: security/<model>_security.xml (e.g. custom_item_security.xml)
-        - Rule XML ID pattern: <model_name>_rule_<concerned_group>
-          (e.g. custom_item_rule_company, custom_item_rule_user, custom_item_rule_manager)
-
-        RECORD RULE GUARDRAIL (DO NOT BLINDLY GENERATE RECORD RULES):
-        - Multi-company rule: ONLY include if the model has a `company_id` field.
-          Models without `company_id` (system configuration, global dictionaries)
-          must NEVER have multi-company rules (it causes runtime domain errors).
-        - Personal / Row-level rule: ONLY include if the business logic requires
-          row-level data partitioning between standard users and managers.
-          If all internal users share records, `ir.model.access.csv` alone is sufficient.
-          Unnecessary record rules add SQL WHERE-clause overhead to every query.
-    -->
-
-    <!-- 1. Multi-Company Record Rule: <model>_rule_company
-         - For strictly company-dependent models: [('company_id', 'in', company_ids)]
-         - For optionally shared models (e.g. contacts, products): ['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]
-         (Delete this record if model has no company_id field)
-    -->
+    PATTERN 1: Multi-Company Isolation
+    PREREQUISITE: Model MUST have a 'company_id' field.
+    Omit this rule if the model has no company_id (e.g. system configs, global tags).
+    
     <record id="custom_item_rule_company" model="ir.rule">
         <field name="name">Custom Item: Multi-Company Isolation</field>
         <field name="model_id" ref="model_custom_item"/>
         <field name="domain_force">[('company_id', 'in', company_ids)]</field>
     </record>
+    -->
 
-    <!-- 2. Personal Records Rule: <model>_rule_user (Users only access items assigned to them) -->
+    <!--
+    PATTERN 2: Personal Records (Row-Level User Partitioning)
+    PREREQUISITE: Business requirements explicitly demand that standard users
+    only access records they created or are assigned to.
+    
     <record id="custom_item_rule_user" model="ir.rule">
         <field name="name">Custom Item: Personal Records</field>
         <field name="model_id" ref="model_custom_item"/>
@@ -39,13 +39,18 @@
         <field name="perm_create" eval="True"/>
         <field name="perm_unlink" eval="False"/>
     </record>
+    -->
 
-    <!-- 3. Manager Rule: <model>_rule_manager (Managers see all records across the company) -->
+    <!--
+    PATTERN 3: Manager Full-Access Override
+    PREREQUISITE: Used in combination with Pattern 2 so managers can access all records.
+    
     <record id="custom_item_rule_manager" model="ir.rule">
         <field name="name">Custom Item: Manager Access All</field>
         <field name="model_id" ref="model_custom_item"/>
         <field name="domain_force">[(1, '=', 1)]</field>
         <field name="groups" eval="[(4, ref('custom_item_group_manager'))]"/>
     </record>
+    -->
 
 </odoo>

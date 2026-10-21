@@ -17,8 +17,9 @@ All paths in this repository are relative, modular, and portable across any OS o
 │           ├── SKILL.md                   # Main agent entrypoint with YAML frontmatter
 │           ├── scripts/
 │           │   ├── verify_odoo19_compat.py # Standalone CLI linter detecting Odoo 19 antipatterns
+│           │   ├── verify_packaging.py    # Packaging & drop-in installation validator
 │           │   └── test_linter.py         # Regression unit test suite (standard library unittest)
-│           ├── templates/                 # Modular Odoo 19 boilerplate files (.template)
+│           ├── templates/                 # Reference scaffolds & starter templates (.template)
 │           │   ├── __manifest__.py.template
 │           │   ├── model.py.template
 │           │   ├── views.xml.template
@@ -63,6 +64,9 @@ python3 .agents/skills/odoo-19/scripts/test_linter.py
 
 # 2. Audit all templates and references in strict mode
 python3 .agents/skills/odoo-19/scripts/verify_odoo19_compat.py .agents/skills/odoo-19/templates .agents/skills/odoo-19/references --strict
+
+# 3. Validate packaging layout, link integrity, and simulated drop-in installation
+python3 .agents/skills/odoo-19/scripts/verify_packaging.py
 ```
 
 ---

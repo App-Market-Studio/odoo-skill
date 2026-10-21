@@ -197,9 +197,12 @@ Refer to the specialized modular reference documents for deep-dive architecture 
 
 ---
 
-## Production-Ready Code Templates
+## Reference Scaffolds & Starter Templates
 
-Use the provided templates when scaffolding new modules or files:
+Use the provided templates as structural reference scaffolds when scaffolding new modules or files:
+
+> [!IMPORTANT]
+> **Scaffold Adaptation Rule**: These templates illustrate syntax patterns, 10-section attribute ordering, and modern Odoo 19 conventions. They are **scaffolds, not drop-in business models**. You MUST tailor them to actual task specifications by stripping away irrelevant fields, mixins (`mail.thread`), constraints, or rules that the specific domain does not require.
 
 - [Module Manifest](./templates/__manifest__.py.template): Strict loading order, dependencies, modern hooks, unit test assets.
 - [Model Boilerplate](./templates/model.py.template): Clean model with SQL table objects, computed fields, aggregator, constraints, safe `SQL`.

@@ -16,8 +16,9 @@ Built directly from the official Odoo 19.0 documentation and source architecture
 │           ├── SKILL.md                       # Main agent entrypoint with YAML frontmatter
 │           ├── scripts/
 │           │   ├── verify_odoo19_compat.py    # Python CLI linter detecting Odoo 19 antipatterns
+│           │   ├── verify_packaging.py        # Packaging & drop-in integrity validation script
 │           │   └── test_linter.py             # Regression test suite for linter
-│           ├── templates/                     # Production-ready Odoo 19 boilerplate files
+│           ├── templates/                     # Reference scaffolds & starter templates
 │           │   ├── __manifest__.py.template   # Manifest with strict data loading order
 │           │   ├── model.py.template          # Model with SQL table objects, precompute, and safe SQL
 │           │   ├── views.xml.template         # <list>, <form>, <search>, stat buttons, <chatter/>
@@ -25,7 +26,7 @@ Built directly from the official Odoo 19.0 documentation and source architecture
 │           │   ├── wizard_views.xml.template  # Wizard modal form with <footer> actions
 │           │   ├── security_groups.xml.template # Category, User, and Manager groups
 │           │   ├── ir.model.access.csv.template # Model-level ACL rules
-│           │   ├── ir_rules.xml.template      # Multi-company and personal record rules
+│           │   ├── ir_rules.xml.template      # Conditional record rule patterns (scaffold only)
 │           │   ├── ir_sequence_data.xml.template # Automated sequence definition
 │           │   ├── ir_cron_data.xml.template  # Scheduled background action
 │           │   ├── ir_actions_report.xml.template # QWeb PDF report action binding
@@ -191,6 +192,24 @@ The tool scans XML and Python files for:
 - Deprecated `'force_company'` in context (must be `.with_company(company)`)
 - Deprecated `@ormcache_context` (must be `@ormcache`)
 - Uppercase domain operators (`'LIKE'`, `'IN'`)
+
+> [!NOTE]
+> **Static Linter vs. Runtime Odoo Verification**: The CLI linter is a fast, standalone antipattern safeguard powered by regular expressions. It catches common syntax and schema deprecations early, but it is **not a substitute for runtime Odoo testing**. Module release and verification always require deploying the module into an active Odoo 19 instance, verifying database schema generation (`-i <module>`), running automated unit tests (`--test-enable`), and validating browser UI interactions.
+
+### Development & Skill Quality Assurance
+
+Before committing changes to this repository or redistributing the skill, execute the test and validation scripts:
+
+```bash
+# 1. Run unit test suite for the linter (34 tests)
+python3 .agents/skills/odoo-19/scripts/test_linter.py
+
+# 2. Audit all templates and references in strict mode
+python3 .agents/skills/odoo-19/scripts/verify_odoo19_compat.py .agents/skills/odoo-19/templates .agents/skills/odoo-19/references --strict
+
+# 3. Verify packaging integrity, link resolution, and simulated drop-in installation
+python3 .agents/skills/odoo-19/scripts/verify_packaging.py
+```
 
 ---
 
