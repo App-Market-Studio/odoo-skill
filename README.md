@@ -73,14 +73,17 @@ If you develop multiple custom addons inside a parent directory (e.g. `extra-add
 cd /path/to/extra-addons/
 git clone -b 19.0 https://github.com/App-Market-Studio/odoo-skill.git
 
-# Create symlinks in the parent directory:
+# 1. Symlink .agents so all sibling addons discover the skill automatically (Required):
 ln -s odoo-skill/.agents .agents
-ln -s odoo-skill/AGENTS.md AGENTS.md
+
+# 2. (Optional) Symlink AGENTS.md if you want repo-level rules, or keep a custom AGENTS.md for your client addons:
+# ln -s odoo-skill/AGENTS.md AGENTS.md
 ```
 
 **Why Pattern B is optimal for Odoo development:**
 - **Zero Git Pollution**: Individual addon repositories (`addon_a`, `addon_b`) remain 100% clean with no skill files or submodules in their git histories.
 - **Universal Upward Discovery**: AI coding agents (OpenCode, Antigravity) traverse ancestor directories from `cwd` and automatically discover `.agents/skills/odoo-19` whichever addon you are editing.
+- **Project Isolation**: Leaving `AGENTS.md` unlinked or custom allows each project or workspace to maintain its own project-specific instructions without inheriting the skill repository's internal maintenance guidelines.
 - **Instant Updates**: Running `git pull` inside `odoo-skill/` immediately updates guidance, templates, and the linter across all addons in that workspace.
 
 ---
