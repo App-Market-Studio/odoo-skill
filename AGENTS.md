@@ -76,17 +76,17 @@ When modifying or adding files to this skill package, strictly follow these rule
 2. **Strict Odoo 19 Standard Compliance & Official Guidelines**:
    - Views: Use `<list>` instead of legacy `<tree>`. View mode must be `list,form`.
    - View XML IDs & Naming: `<model_name>_view_<type>`. `<field name="name">` MUST match XML ID with dots replacing underscores.
-   - Inherited Views: Must retain the exact XML ID of the target record, with `.inherit.<details>` in the view name.
+   - Inherited Views: Unique descriptive XML ID `<target_view_id>_inherit_<feature>`, with `.inherit.<details>` in the view name. (Reusing base ID is reserved for in-place data updates).
    - UI Expressions: Direct Python expressions (`invisible=`, `readonly=`, `required=`), never legacy `attrs="..."` or `states="..."`.
-   - List Columns: Use `column_invisible=` when toggling an entire column.
+   - List Columns: Use `column_invisible=` when hiding an entire column; use `invisible=` for row-level cell hiding.
    - QWeb: Always use `t-out`, never `t-esc` or `t-raw`.
    - SQL Table Objects: Use `models.Constraint`, `models.Index`, and `models.UniqueIndex` (must start with a leading underscore `_`). Never use deprecated `_sql_constraints`.
-   - Model Structure: Enforce the official 10-section attribute ordering sequence. Single-record action methods must start with `self.ensure_one()`.
+   - Model Structure: Follow the recommended 10-section attribute ordering sequence. Single-record action methods must enforce `self.ensure_one()`; batch actions must preserve recordset iteration.
    - Transient Models: Name as `<related_base_model>.<action>` (e.g. `account.invoice.make`), strictly avoiding the word `wizard`.
    - Controllers: Single controller named `<module_name>.py` (deprecates `main.py`). HTTP routing for JSON-RPC must use `type='jsonrpc'`.
    - Translation `_()`: Literal strings only with `_('literal %s', arg)` or `_('literal %(k)s', k=v)`. Never format inside or outside `_()`.
    - SCSS/CSS: Outside-in properties order, scoped variables `$-var` and BEM contextual CSS variables `--var` at the top, `.o_<module_name>` class prefix.
-   - Safe SQL: Always wrap raw SQL using `odoo.tools.SQL`.
+   - Safe SQL & ORM: Prefer native ORM (`_read_group`, `search_count`). When raw SQL is justified, flush dirty cache (`flush_model()`), use `odoo.tools.SQL`, and manually enforce multi-company security.
 
 3. **Non-Dogmatic Performance & Security Guidelines**:
    - Do not claim "zero ORM calls in loops" blindly; distinguish Odoo's prefetching cache from true N+1 queries.

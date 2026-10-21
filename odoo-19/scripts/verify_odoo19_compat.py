@@ -551,6 +551,9 @@ def check_python_file(path: Path) -> list[Issue]:
     return check_python_lines(lines, str(path))
 
 
+IGNORED_DIR_NAMES = {".git", "__pycache__", "venv", ".venv", ".env", "node_modules"}
+
+
 def scan_target(target_path: Path) -> tuple[list[Issue], int]:
     all_issues = []
     file_count = 0
@@ -566,11 +569,19 @@ def scan_target(target_path: Path) -> tuple[list[Issue], int]:
             file_count = 1
         return all_issues, file_count
 
-    for root, _, files in os.walk(target_path):
-        # Ignore git, cache, virtualenvs, and linter self-testing scripts
-        if any(ignored in root for ignored in [".git", "__pycache__", "venv", ".env", "node_modules", "scripts"]):
+    for root, dirs, files in os.walk(target_path):
+        # Prune ignored directories in-place so os.walk does not recurse into them
+        dirs[:] = [d for d in dirs if d not in IGNORED_DIR_NAMES]
+
+        # Verify that no ancestor path component inside the walk is an ignored directory
+        if any(part in IGNORED_DIR_NAMES for part in Path(root).parts):
             continue
+
         for file in files:
+            # Skip the linter's own tooling and unit test fixtures during directory scans
+            if file in ("test_linter.py", "verify_odoo19_compat.py"):
+                continue
+
             file_path = Path(root) / file
             if file_path.suffix == ".xml":
                 all_issues.extend(check_xml_file(file_path))

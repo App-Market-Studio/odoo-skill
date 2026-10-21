@@ -151,39 +151,61 @@ class CustomItem(models.Model):
         if any(rec.state not in ('draft', 'cancel') for rec in self):
             raise UserError(_("Cannot delete confirmed or completed items."))
 
-    # 9. Action methods (prefixed with action_*, ensure_one() for single-record actions)
+    # 9. Action methods (prefixed with action_*)
+    # Contract semantics:
+    # - Single-record actions (e.g. form buttons): Enforce self.ensure_one()
+    # - Multi-record actions (e.g. list view / batch server actions): Preserve recordset semantics (no ensure_one)
     def action_confirm(self):
+        """Single-record action: transitions state to confirmed."""
         self.ensure_one()
         if self.state != 'draft':
             raise UserError(_("Only draft items can be confirmed."))
         self.state = 'confirmed'
         self.message_post(body=_("Item %(name)s has been confirmed.", name=self.display_name))
 
-    def action_done(self):
-        self.ensure_one()
-        self.write({'state': 'done'})
-
     def action_cancel(self):
-        self.ensure_one()
+        """Batch-capable action: cancels all items in the current recordset."""
+        for item in self:
+            if item.state == 'done':
+                raise UserError(_("Completed item %(name)s cannot be canceled.", name=item.display_name))
         self.write({'state': 'cancel'})
 
     # 10. Business methods & private helpers
     @api.private
     def _fetch_partner_summary(self, partner_id):
-        """Internal helper not exposed via external RPC."""
-        query = SQL(
-            """
-            SELECT count(id) AS total_items, COALESCE(sum(amount), 0) AS total_val
-            FROM custom_item
-            WHERE partner_id = %s
-              AND company_id = %s
-              AND active = TRUE
-            """,
-            partner_id,
-            self.env.company.id,
+        """Fetch aggregated partner summary using native ORM.
+        
+        Native _read_group() is preferred by default because it:
+        - Automatically enforces Odoo record rules (ir.rule) and access rights.
+        - Stays synchronized with in-memory transaction cache.
+        - Preserves multi-company security domains.
+        """
+        domain = [
+            ('partner_id', '=', partner_id),
+            ('company_id', '=', self.env.company.id),
+        ]
+        data = self.env['custom.item']._read_group(
+            domain=domain,
+            groupby=[],
+            aggregates=['__count', 'amount:sum'],
         )
-        self.env.cr.execute(query)
-        return self.env.cr.dictfetchone()
+        if data:
+            total_items, total_val = data[0]
+            return {'total_items': total_items, 'total_val': total_val or 0.0}
+        return {'total_items': 0, 'total_val': 0.0}
+
+    # -------------------------------------------------------------------------
+    # Educational Reference: When is Raw SQL Justified?
+    # -------------------------------------------------------------------------
+    # Only use raw SQL (self.env.cr.execute with odoo.tools.SQL) when the ORM is
+    # measurably inadequate (e.g. massive bulk operations, complex analytical CTEs).
+    #
+    # When using raw SQL, you MUST:
+    # 1. Flush dirty ORM cache first: self.env['custom.item'].flush_model(['amount', 'state'])
+    # 2. Parameterize safely: SQL("SELECT ... WHERE partner_id = %s", partner_id)
+    # 3. Explicitly enforce multi-company security (company_id = %s)
+    # 4. Acknowledge that raw SQL BYPASSES record rules (ir.rule) and field-level security!
+    # -------------------------------------------------------------------------
 
 
 class CustomItemLine(models.Model):

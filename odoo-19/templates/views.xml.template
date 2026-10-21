@@ -159,13 +159,20 @@
 
     <!-- ==================== INHERITING VIEW PATTERN ==================== -->
     <!--
-        Official Odoo Guideline (Inheriting XML):
-        1. XML ID MUST be identical to the original record ID (the module prefix prevents collisions).
-        2. View name MUST contain an '.inherit.<details>' suffix.
-        3. Primary view inherits require <field name="mode">primary</field> and a new ID.
+        Best Practices for Inheriting Views:
+        1. Unique XML ID: Assign a unique, descriptive XML ID for each new inherited view record,
+           conventionally: <target_view_id>_inherit_<module_or_feature>
+           (e.g., 'view_partner_form_inherit_custom_item').
+           Note: Reusing the target ID (e.g. id="view_partner_form") in another module creates a
+           module-qualified external ID (my_module.view_partner_form). While seen in core shorthand,
+           giving each view a distinct ID avoids collisions when multiple views in the same module
+           inherit the same base view. Reusing the base ID is primarily appropriate when intentionally
+           updating that exact existing record in-place via an XML data update.
+        2. View name: Append '.inherit.<details>' to indicate extension (e.g., 'res.partner.view.form.inherit.custom.item').
+        3. Primary inheritance: Use <field name="mode">primary</field> only when creating a distinct new view branch.
     -->
     <!--
-    <record id="view_partner_form" model="ir.ui.view">
+    <record id="view_partner_form_inherit_custom_item" model="ir.ui.view">
         <field name="name">res.partner.view.form.inherit.custom.item</field>
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="base.view_partner_form"/>

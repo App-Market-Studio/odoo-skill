@@ -120,9 +120,9 @@ from . import res_partner
 
 ---
 
-## 3. Official 10-Section Model Attribute Ordering
+## 3. Recommended 10-Section Model Attribute Ordering (Style & Architecture)
 
-According to official Odoo guidelines, attributes and methods within a model class MUST follow this strict 10-section sequence:
+In accordance with official Odoo coding guidelines, model classes are structured into a 10-section sequence. This is an architectural style recommendation that enhances team readability and maintainability:
 
 1. **Private attributes**: `_name`, `_description`, `_inherit`, `_inherits`, `_order`, `_rec_name`, `_check_company_auto`.
 2. **Default methods and `default_get`**: Methods returning defaults (e.g. `_default_<field>`).
@@ -132,7 +132,9 @@ According to official Odoo guidelines, attributes and methods within a model cla
 6. **Selection methods**: Dynamic methods returning choices for selection fields (`_selection_<field>`).
 7. **Constrains and onchange methods**: Validation methods (`@api.constrains`) and interactive form helpers (`@api.onchange`).
 8. **CRUD overrides**: ORM lifecycle overrides (`create`, `write`, `unlink`, `_search`, `name_search`).
-9. **Action methods**: Business actions triggered by buttons (`action_*`), requiring `self.ensure_one()` for single-record operations.
+9. **Action methods**: Business actions triggered by UI buttons or workflows (`action_*`).
+   - **Contract Rule**: Add `self.ensure_one()` when the method requires a single-record context (e.g. form view action buttons).
+   - **Batch Actions**: For multi-record actions (e.g. list view selection actions, batch processing), preserve recordset semantics and iterate over `self` without calling `ensure_one()`.
 10. **Business methods & private helpers**: Core domain calculations and internal methods (`@api.private`).
 
 ```python
@@ -191,10 +193,18 @@ class EstateProperty(models.Model):
     def create(self, vals_list):
         return super().create(vals_list)
 
-    # 9. Action methods (prefixed action_*, ensure_one for single-record actions)
+    # 9. Action methods
     def action_confirm(self):
+        """Single-record action: enforces singleton."""
         self.ensure_one()
         self.write({'state': 'confirmed'})
+
+    def action_batch_cancel(self):
+        """Multi-record action: preserves batch semantics."""
+        for record in self:
+            if record.state == 'done':
+                raise UserError(_("Completed properties cannot be canceled."))
+        self.write({'state': 'cancel'})
 
     # 10. Business methods
     def get_market_analysis(self):
@@ -541,16 +551,60 @@ records = self.env['estate.property'].search(domain)
 
 ---
 
-## 11. Safe SQL Execution with `odoo.tools.SQL`
+## 11. ORM Aggregations vs Safe SQL Execution
 
-> [!IMPORTANT]
-> **ORM Preference & SQL Safety Standard**:
-> Always **prefer the ORM for ordinary business operations**. Only use raw SQL when complex reporting aggregations or massive batch data migrations require it. When raw SQL is strictly necessary, require safe, parameterized SQL through Odoo's supported SQL utilities (`odoo.tools.SQL`). Never use raw Python string formatting (`%s` or `.format()`) directly in `cr.execute`. Remember that raw SQL bypasses multi-company record rules, field-level access checks, and ORM cache invalidation.
+### Native ORM Aggregations (`_read_group`) — The Default Standard
+For summaries, metrics, and grouping, always prefer native `_read_group()` over raw SQL. The ORM automatically:
+- Evaluates active record rules (`ir.rule`) and access rights (`ir.model.access`).
+- Stays synchronized with in-memory transaction modifications.
+- Guarantees multi-company isolation.
+
+```python
+def get_partner_property_summary(self, partner_id):
+    """Aggregate statistics using native ORM."""
+    data = self.env['estate.property']._read_group(
+        domain=[
+            ('partner_id', '=', partner_id),
+            ('company_id', '=', self.env.company.id),
+        ],
+        groupby=[],
+        aggregates=['__count', 'expected_price:sum', 'selling_price:avg'],
+    )
+    if data:
+        count, total_expected, avg_selling = data[0]
+        return {
+            'count': count,
+            'total_expected': total_expected or 0.0,
+            'avg_selling': avg_selling or 0.0,
+        }
+    return {'count': 0, 'total_expected': 0.0, 'avg_selling': 0.0}
+```
+
+### When is Raw SQL Justified?
+Only use raw SQL (`self.env.cr.execute` with `odoo.tools.SQL`) when the ORM is demonstrably inadequate:
+1. Massive batch operations where ORM recordset allocation would cause unacceptable memory/CPU overhead.
+2. Complex analytical queries involving window functions, recursive CTEs, or specialized PostgreSQL operators.
+
+> [!WARNING]
+> **Mandatory Precautions for Raw SQL**:
+> 1. **Flush ORM Cache**: Before running raw `cr.execute`, you **MUST** flush dirty in-memory fields to the database cursor:
+>    ```python
+>    self.env['estate.property'].flush_model(['selling_price', 'state'])
+>    ```
+> 2. **Never Concatenate Values**: Always parameterize with `odoo.tools.SQL`.
+> 3. **Manual Security Filtering**: Raw SQL completely **bypasses record rules (`ir.rule`)** and ACLs. You must manually include multi-company (`company_id = %s`) and active status checks (`active = TRUE`).
+> 4. **Post-Query Invalidation**: If the raw SQL modifies records directly in PostgreSQL (`UPDATE`/`INSERT`), you must invalidate the ORM cache:
+>    ```python
+>    self.env['estate.property'].invalidate_model(['selling_price'])
+>    ```
 
 ```python
 from odoo.tools import SQL
 
 def get_high_value_property_ids(self, min_price):
+    # Flush pending writes before querying directly
+    self.env['estate.property'].flush_model(['company_id', 'price', 'active'])
+
     query = SQL(
         """
         SELECT id, name, price
@@ -567,7 +621,7 @@ def get_high_value_property_ids(self, min_price):
     return self.env.cr.dictfetchall()
 ```
 
-Composing SQL dynamically with identifiers and joins:
+Composing SQL dynamically with identifiers and safe join fragments:
 ```python
 # Safe table and column identifier escaping
 table_sql = SQL.identifier(self._table)

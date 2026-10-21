@@ -413,6 +413,29 @@ class TestLinterCLIExitStatus(unittest.TestCase):
             self.assertEqual(result.returncode, 1, f"Expected returncode 1, got {result.returncode}")
             self.assertIn("Audit FAILED", result.stdout)
 
+    def test_cli_scan_under_directory_with_scripts_in_ancestor_path(self):
+        """Directories with 'scripts' in ancestor path must NOT be skipped."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_dir = Path(tmp_dir) / "workspace" / "scripts" / "my_odoo_addon" / "models"
+            project_dir.mkdir(parents=True)
+            model_file = project_dir / "item.py"
+            model_file.write_text(
+                "from odoo import models, fields\n\n"
+                "class TestItem(models.Model):\n"
+                "    _name = 'test.item'\n"
+                "    _description = 'Test Item'\n"
+                "    name = fields.Char(string='Name')\n"
+            )
+
+            result = subprocess.run(
+                [sys.executable, str(self.cli_path), str(project_dir.parent)],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}")
+            self.assertIn("Files scanned: 1", result.stdout)
+            self.assertIn("Audit PASSED", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

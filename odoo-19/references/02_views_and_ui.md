@@ -28,7 +28,8 @@ In Odoo 19, tabular views are declared using `<list>`:
                    widget="badge"
                    decoration-success="state == 'done'"
                    decoration-info="state == 'confirmed'"/>
-            <!-- Column visibility must use column_invisible in list views -->
+            <!-- Column visibility: column_invisible hides the entire column (header + all rows);
+                 invisible hides specific cell content per row -->
             <field name="company_id" groups="base.group_multi_company" optional="hide"/>
         </list>
     </field>
@@ -40,7 +41,8 @@ In Odoo 19, tabular views are declared using `<list>`:
 - `decoration-*="python_expression"`: Dynamically applies color styles to rows (`decoration-danger`, `decoration-success`, `decoration-warning`, `decoration-info`, `decoration-muted`, `decoration-bf`, `decoration-it`).
 - `sample="1"`: Displays mock records when the table is empty to onboard users.
 - `optional="show"` or `optional="hide"`: Allows users to toggle column visibility from the column selector dropdown.
-- `column_invisible="python_expression"`: Hides an entire column dynamically based on parent/context conditions.
+- `column_invisible="python_expression"`: Hides an entire column (header and all cells) dynamically based on parent/context conditions (e.g. `column_invisible="parent.state == 'done'"`).
+- `invisible="python_expression"` (on list fields): Conditionally hides the cell's content, button, or badge for individual rows satisfying the condition, without removing the column from the table layout.
 
 ---
 
@@ -255,12 +257,17 @@ Official Odoo guidelines enforce consistent XML ID and record name patterns:
 Customize standard views cleanly using XPath extensions:
 
 ```xml
-<!-- Official Inheriting XML Rule:
-     1. XML ID MUST be identical to the original record ID (module prefix prevents collisions).
-     2. View name MUST have an '.inherit.<details>' suffix.
-     3. Primary view overrides declare <field name="mode">primary</field> and use a new ID.
+<!-- Inheriting View Best Practices:
+     1. XML ID: Use a unique, descriptive XML ID for each new inherited view record:
+        <target_view_id>_inherit_<module_or_feature> (e.g. 'view_partner_form_inherit_estate').
+        Nuance on ID reuse: Reusing the target ID (id="view_partner_form") creates a module-qualified
+        external ID (my_module.view_partner_form). While used in core shorthand for single extensions,
+        unique IDs prevent collisions when a module contains multiple inherited views for the same model.
+        Reusing the exact ID is primarily reserved for in-place data updates of an existing record.
+     2. View Name: Suffix the name with '.inherit.<details>' (e.g. 'res.partner.view.form.inherit.estate').
+     3. Primary Inheritance: Declare <field name="mode">primary</field> only when creating a new view branch.
 -->
-<record id="view_partner_form" model="ir.ui.view">
+<record id="view_partner_form_inherit_estate" model="ir.ui.view">
     <field name="name">res.partner.view.form.inherit.estate</field>
     <field name="model">res.partner</field>
     <field name="inherit_id" ref="base.view_partner_form"/>

@@ -12,7 +12,7 @@ This document catalogs critical breaking changes, deprecations, and architectura
 | **Actions** | `view_mode="tree,form"` | `view_mode="list,form"` | **WARNING** |
 | **View Modifiers** | `attrs="{'invisible': ...}"` | `invisible="expression"` | **BREAKING** |
 | **View Modifiers** | `states="draft,open"` | `invisible="state not in ('draft', 'open')"` | **BREAKING** |
-| **List Columns** | `invisible="1"` on list column | `column_invisible="expression"` | **BREAKING** |
+| **List Columns** | `invisible="1"` to hide entire column | `column_invisible="expression"` (use `invisible=` for cell-level hiding) | **BREAKING** |
 | **Chatter** | `<div class="oe_chatter">` | `<chatter/>` tag | **WARNING** |
 | **QWeb Directives** | `t-esc="..."`, `t-raw="..."` | `t-out="..."` | **DEPRECATED** |
 | **SQL Constraints** | `_sql_constraints = [...]` | `models.Constraint`, `models.UniqueIndex` (must start with `_`) | **DEPRECATED** |
@@ -46,8 +46,9 @@ This document catalogs critical breaking changes, deprecations, and architectura
 - **Old**: `<field name="partner_id" attrs="{'invisible': [('state', '=', 'cancel')]}"/>`
 - **New**: `<field name="partner_id" invisible="state == 'cancel'"/>`
 
-### 3. Column Visibility in Lists (`column_invisible`)
-- In `<list>` views, use `column_invisible="condition"` to toggle column visibility. Using `invisible` on a list field causes cell layout defects.
+### 3. Column vs Cell Visibility in Lists (`column_invisible` vs `invisible`)
+- In `<list>` views, use `column_invisible="condition"` to toggle the entire column (header and all cells), typically conditioned on parent or context values.
+- Use `invisible="condition"` on a list field when you only want to conditionally blank/hide the cell value, button, or badge for individual rows based on row data, without removing the column from the table layout.
 
 ### 4. SQL Table Objects (`models.Constraint`, `models.Index`, `models.UniqueIndex`)
 - Declare constraints and indexes as class attributes starting with `_`:

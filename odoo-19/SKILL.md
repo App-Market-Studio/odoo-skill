@@ -127,23 +127,23 @@ Before implementing any custom module, model, or workflow—especially in comple
 
 ---
 
-## Non-Negotiable Rules for Odoo 19
+## Odoo 19 Framework Invariants & Version Requirements
 
-Before generating or modifying any code, enforce these strict requirements:
+Before generating or modifying any code, ensure full compliance with Odoo 19 version requirements. Violations cause syntax errors, deprecation warnings, or runtime execution failures:
 
-| Component | ❌ FORBIDDEN in Odoo 19 | ✅ REQUIRED in Odoo 19 |
+| Component | ❌ Legacy / Incompatible Pattern | ✅ Required Odoo 19 Standard |
 | :--- | :--- | :--- |
 | **List Views** | `<tree string="...">` | `<list string="...">` |
 | **Actions** | `view_mode="tree,form"` | `view_mode="list,form"` |
 | **Dynamic View Attrs** | `attrs="{'invisible': [('state', '=', 'done')]}"` | `invisible="state == 'done'"` (Direct Python expression) |
 | **Field States** | `states="draft,confirmed"` | `invisible="state not in ('draft', 'confirmed')"` |
-| **List Column Hiding** | `invisible="1"` on list column | `column_invisible="condition"` |
+| **List Column Visibility** | `invisible="1"` to hide entire column | `column_invisible="condition"` (use `invisible=` for cell-level hiding) |
 | **Chatter Integration** | `<div class="oe_chatter">...</div>` | Modern `<chatter/>` tag |
 | **QWeb Output** | `<t t-esc="val"/>`, `<t t-raw="val"/>` | `<t t-out="val"/>` (Auto-escaped, XSS-safe) |
 | **SQL Constraints** | `_sql_constraints = [...]` | `models.Constraint`, `models.UniqueIndex` (Name MUST start with `_`) |
 | **ORM Environment** | `self._cr`, `self._uid`, `self._context` | `self.env.cr`, `self.env.uid`, `self.env.context` |
 | **Legacy OSV** | `from odoo.osv import osv` | Standard `odoo.models.Model` |
-| **Raw SQL Execution** | `cr.execute("SELECT ... %s" % val)` | Require `odoo.tools.SQL` when raw SQL is needed; prefer ORM for standard logic |
+| **Raw SQL Execution** | `cr.execute("SELECT ... %s" % val)` | Flush dirty cache (`flush_model()`) and require `odoo.tools.SQL`; prefer native ORM `_read_group()` |
 | **Controller Routes** | `@http.route(type='json')` | `@http.route(type='jsonrpc')` (Core Odoo 19 standard) |
 | **External API** | Legacy XML-RPC (`/xmlrpc/2/...`), `/jsonrpc` | Modern **External JSON-2 API** (`POST /json/2/<model>/<method>`) |
 | **Manifest Hooks** | `def post_init_hook(cr, registry):` | `def post_init_hook(env):` (Single `env` argument) |
@@ -151,14 +151,24 @@ Before generating or modifying any code, enforce these strict requirements:
 | **Field Aggregation** | `group_operator="sum"` | `aggregator="sum"` |
 | **Company Context** | `context={'force_company': id}` | `record.with_company(company)` |
 | **Frontend Tests** | Legacy QUnit suites | **Hoot** (`@odoo/hoot` in `web.assets_unit_tests`) |
-| **Internal Methods** | Unmarked public methods | Mark internal methods with `@api.private` or prefix with `_` |
-| **View XML IDs & Names** | `id="view_..."`, name omitting `.view.` | `id="<model>_view_<type>"` and `<field name="name">` matching XML ID with dots |
-| **Inherited Views** | Inventing new XML ID with `_inherit` | Keep the **exact same XML ID** as the target record; suffix view name with `.inherit.<details>` |
-| **Transient Models** | `_name` containing `.wizard` or file `my_wizard.py` | `<related_base_model>.<action>` (e.g. `account.invoice.make`), strictly avoiding the word `wizard` |
-| **Controller Naming** | `controllers/main.py` (outdated) | `controllers/<module_name>.py` and `<inherited_module_name>.py` |
-| **Translation `_()`** | `_('...' % val)` or `_('...') % val` | `_('... %s', val)` or `_('... %(k)s', k=val)` (static literals only, no formatting before/after) |
-| **Model Structure** | Arbitrary attribute sequence | Official **10-Section Ordering** (private -> default -> fields -> SQL -> compute -> selection -> constrains -> CRUD -> actions -> business) |
-| **Action Methods** | Missing single-record validation | Add `self.ensure_one()` at the top of single-record `action_*` methods |
+
+---
+
+## Odoo Official Coding Style & Architecture Conventions
+
+These guidelines represent Odoo's official architectural recommendations and conventions. Adhere to them for clean, maintainable, and idiomatic codebase design:
+
+| Component | Standard Recommendation | Implementation Rationale |
+| :--- | :--- | :--- |
+| **View XML IDs & Names** | `id="<model>_view_<type>"` and `<field name="name">` matching XML ID with dots | Standardizes XML ID discovery and UI view inspection across modules. |
+| **Inherited Views** | Unique descriptive XML ID: `<target_view_id>_inherit_<feature>`, with `.inherit.<details>` in view name | Unambiguously identifies new inherited records; avoids collisions when multiple views extend the same model. (Reusing base ID is reserved for in-place record updates). |
+| **Transient Models** | `<related_base_model>.<action>` (e.g. `account.invoice.make`), avoiding the word `wizard` | Aligns with core Odoo naming conventions for transient models and wizards. |
+| **Controller File Naming** | `controllers/<module_name>.py` and `<inherited_module_name>.py` | Standardizes file layout, deprecating ambiguous generic `main.py` files. |
+| **Translation `_()`** | `_('... %s', val)` or `_('... %(k)s', k=val)` without formatting `%` before or after `_()` | Preserves static literal strings required by the PO gettext extraction pipeline. |
+| **Model Structure** | Recommended **10-Section Ordering** (private -> default -> fields -> SQL -> compute -> selection -> constrains -> CRUD -> actions -> business) | Organizes models into predictable, readable sections across development teams. |
+| **Action Methods** | Infer contract: enforce `self.ensure_one()` for single-record actions; preserve recordset iteration for batch actions | Guarantees singleton safety where required without breaking multi-record actions. |
+| **Private Methods** | Mark internal helpers with `@api.private` or prefix with `_` | Prevents unintended exposure of private logic over external RPC endpoints. |
+| **SCSS Stylesheets** | Outside-in properties order, scoped `$-var` and contextual `--var` variables, `.o_<module>` prefix | Adheres to official Odoo UI design system standards. |
 
 ---
 
@@ -224,14 +234,14 @@ Before marking any Odoo task as complete, verify each item:
 - [ ] Did I use only real Odoo 19 APIs? (No invented methods, fields, or deprecated record attributes like `self._cr` or `request.cr`).
 - [ ] Are all QWeb templates using `t-out` instead of `t-esc` / `t-raw`?
 - [ ] Are SQL table objects (`models.Constraint`, `models.UniqueIndex`) named with a leading underscore `_`?
-- [ ] Are all list view columns using `column_invisible=` rather than `invisible=`?
+- [ ] In list views, is `column_invisible=` used when hiding an entire column (header and cells), and `invisible=` used when conditionally hiding specific cell values or row actions?
 - [ ] Do view XML IDs follow `<model>_view_<type>` and does `<field name="name">` match the XML ID with dots replacing underscores?
-- [ ] Do inheriting views preserve the exact XML ID of the target record and add `.inherit.<details>` to the view name?
+- [ ] Do inherited views define a unique, descriptive XML ID (`<target_view_id>_inherit_<feature>`) and add `.inherit.<details>` to the view name?
 - [ ] Do TransientModels avoid the word `wizard` and adhere to `<related_base_model>.<action>`?
 - [ ] Are translation strings formatted strictly as `_('literal %s', arg)` or `_('literal %(k)s', k=v)` without formatting before or after `_()`?
-- [ ] Does the model adhere to the official 10-section attribute ordering sequence?
-- [ ] Do single-record action methods (`action_*`) begin with `self.ensure_one()`?
-- [ ] Did I use `odoo.tools.SQL` for any custom raw SQL queries?
+- [ ] Does the model structure adhere to the recommended 10-section attribute ordering sequence?
+- [ ] Do single-record action methods enforce `self.ensure_one()`, while batch/multi-record actions preserve recordset iteration?
+- [ ] Did I prefer native ORM methods (`_read_group`, `search_count`) for summaries and aggregations, reserving `odoo.tools.SQL` with `flush_model()` only for justified performance-critical operations?
 - [ ] Did I clearly distinguish in my report what was statically verified vs runtime tested, marking anything not executed as `[UNVERIFIED]`?
 - [ ] Would a Senior Odoo Technical Architect approve this code for long-term maintainability?
 
