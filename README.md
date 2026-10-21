@@ -57,14 +57,31 @@ Built directly from the official Odoo 19.0 documentation and source architecture
 
 This skill is packaged using the open **Agent Skill Standard** (`SKILL.md` with YAML frontmatter, modular references, templates, and standalone audit scripts). It is organized in the standard `.agents/skills/` layout for **zero-config drop-in** use across any major AI coding assistant:
 
-### Quick Start: Zero-Config Drop-In
-Simply copy or clone the `.agents/` folder and `AGENTS.md` directly into your `<project_root>/`:
+### Quick Start: Installation Patterns
+
+#### Pattern A: Single Addon / Standalone Project Drop-In
+Copy the `.agents/` folder and `AGENTS.md` directly into your addon root:
 ```bash
 # From within your custom Odoo project root:
 cp -r <skill_repo_path>/.agents <project_root>/
 cp <skill_repo_path>/AGENTS.md <project_root>/
 ```
-Both **Antigravity** and **OpenCode** will automatically discover `<project_root>/.agents/skills/odoo-19` with zero manual configuration!
+
+#### Pattern B: Multi-Addon Workspace (Recommended for Odoo Developers)
+If you develop multiple custom addons inside a parent directory (e.g. `extra-addons/` containing `addon_a/`, `addon_b/`), clone `odoo-skill` once as a sibling and create parent symlinks:
+```bash
+cd /path/to/extra-addons/
+git clone -b 19.0 https://github.com/App-Market-Studio/odoo-skill.git
+
+# Create symlinks in the parent directory:
+ln -s odoo-skill/.agents .agents
+ln -s odoo-skill/AGENTS.md AGENTS.md
+```
+
+**Why Pattern B is optimal for Odoo development:**
+- **Zero Git Pollution**: Individual addon repositories (`addon_a`, `addon_b`) remain 100% clean with no skill files or submodules in their git histories.
+- **Universal Upward Discovery**: AI coding agents (OpenCode, Antigravity) traverse ancestor directories from `cwd` and automatically discover `.agents/skills/odoo-19` whichever addon you are editing.
+- **Instant Updates**: Running `git pull` inside `odoo-skill/` immediately updates guidance, templates, and the linter across all addons in that workspace.
 
 ---
 
